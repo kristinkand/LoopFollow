@@ -4,8 +4,8 @@
 import SwiftUI
 import UIKit
 
-/// A SwiftUI wrapper around MainViewController that displays the full Home screen.
-/// This can be used both in the tab bar and as a modal from the Menu.
+/// A SwiftUI wrapper around the shared `MainViewController`. Used both as
+/// the Home tab's content and as a pushed/modal view from the Menu.
 struct HomeContentView: UIViewControllerRepresentable {
     let isModal: Bool
 
@@ -14,9 +14,8 @@ struct HomeContentView: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context _: Context) -> UIViewController {
-        let mainVC = MainViewController()
+        let mainVC = MainViewController.shared
         mainVC.overrideUserInterfaceStyle = Storage.shared.appearanceMode.value.userInterfaceStyle
-        mainVC.isPresentedAsModal = isModal
         return mainVC
     }
 
@@ -31,7 +30,7 @@ struct HomeModalView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             HomeContentView(isModal: true)
                 .navigationTitle("Home")
                 .navigationBarTitleDisplayMode(.inline)

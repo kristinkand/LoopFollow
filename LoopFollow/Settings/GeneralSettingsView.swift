@@ -35,115 +35,122 @@ struct GeneralSettingsView: View {
         var id: Self { self }
     }
 
+    // Telemetry — see LoopFollow/Helpers/Telemetry.swift
+    @ObservedObject var telemetryEnabled = Storage.shared.telemetryEnabled
+
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: sectionHeader("App Settings", sheet: .appSettings)) {
-                    Toggle("Display App Badge", isOn: $appBadge.value)
-                    Toggle("Persistent Notification", isOn: $persistentNotification.value)
-                }
+        Form {
+            Section(header: sectionHeader("App Settings", sheet: .appSettings)) {
+                Toggle("Display App Badge", isOn: $appBadge.value)
+                Toggle("Persistent Notification", isOn: $persistentNotification.value)
+            }
 
-                Section(header: sectionHeader("Display", sheet: .display)) {
-                    Picker("Appearance", selection: $appearanceMode.value) {
-                        ForEach(AppearanceMode.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    Toggle("Display Stats", isOn: $showStats.value)
-                    Toggle("Display Small Graph", isOn: $showSmallGraph.value)
-                    Toggle("Color BG Text", isOn: $colorBGText.value)
-                    Toggle("Keep Screen Active", isOn: $screenlockSwitchState.value)
-                    Toggle("Show Display Name", isOn: $showDisplayName.value)
-                    Toggle("Snoozer emoji", isOn: $snoozerEmoji.value)
-                    Toggle("Force portrait mode", isOn: $forcePortraitMode.value)
-                        .onChange(of: forcePortraitMode.value) { _ in
-                            let window = UIApplication.shared.connectedScenes
-                                .compactMap { $0 as? UIWindowScene }
-                                .flatMap { $0.windows }
-                                .first
-
-                            window?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
-                        }
-                }
-
-                Section("Time Zone") {
-                    Toggle("Time Zone Override", isOn: $graphTimeZoneEnabled.value)
-                        .onChange(of: graphTimeZoneEnabled.value) { _ in markChartSettingsDirty() }
-
-                    if graphTimeZoneEnabled.value {
-                        Picker("Time Zone", selection: $graphTimeZoneIdentifier.value) {
-                            ForEach(Self.sortedTimeZones, id: \.identifier) { tz in
-                                Text(Self.timeZoneLabel(tz)).tag(tz.identifier)
-                            }
-                        }
-                        .onChange(of: graphTimeZoneIdentifier.value) { _ in markChartSettingsDirty() }
+            Section(header: sectionHeader("Display", sheet: .display)) {
+                Picker("Appearance", selection: $appearanceMode.value) {
+                    ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
                     }
                 }
+                Toggle("Display Stats", isOn: $showStats.value)
+                Toggle("Display Small Graph", isOn: $showSmallGraph.value)
+                Toggle("Color BG Text", isOn: $colorBGText.value)
+                Toggle("Keep Screen Active", isOn: $screenlockSwitchState.value)
+                Toggle("Show Display Name", isOn: $showDisplayName.value)
+                Toggle("Snoozer emoji", isOn: $snoozerEmoji.value)
+                Toggle("Force portrait mode", isOn: $forcePortraitMode.value)
+                    .onChange(of: forcePortraitMode.value) { _ in
+                        let window = UIApplication.shared.connectedScenes
+                            .compactMap { $0 as? UIWindowScene }
+                            .flatMap { $0.windows }
+                            .first
 
-                Section(header: sectionHeader("Speak BG", sheet: .speakBG)) {
-                    Toggle("Speak BG", isOn: $speakBG.value.animation())
+                        window?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+                    }
+            }
 
-                    if speakBG.value {
-                        Picker("Language", selection: $speakLanguage.value) {
-                            Text("English").tag("en")
-                            Text("French").tag("fr")
-                            Text("Italian").tag("it")
-                            Text("Slovak").tag("sk")
-                            Text("Swedish").tag("sv")
+            Section("Time Zone") {
+                Toggle("Time Zone Override", isOn: $graphTimeZoneEnabled.value)
+                    .onChange(of: graphTimeZoneEnabled.value) { _ in markChartSettingsDirty() }
+
+                if graphTimeZoneEnabled.value {
+                    Picker("Time Zone", selection: $graphTimeZoneIdentifier.value) {
+                        ForEach(Self.sortedTimeZones, id: \.identifier) { tz in
+                            Text(Self.timeZoneLabel(tz)).tag(tz.identifier)
+                        }
+                    }
+                    .onChange(of: graphTimeZoneIdentifier.value) { _ in markChartSettingsDirty() }
+                }
+            }
+
+            Section(header: sectionHeader("Speak BG", sheet: .speakBG)) {
+                Toggle("Speak BG", isOn: $speakBG.value.animation())
+
+                if speakBG.value {
+                    Picker("Language", selection: $speakLanguage.value) {
+                        Text("English").tag("en")
+                        Text("French").tag("fr")
+                        Text("Italian").tag("it")
+                        Text("Slovak").tag("sk")
+                        Text("Swedish").tag("sv")
+                    }
+
+                    Toggle("Always", isOn: $speakBGAlways.value.animation())
+
+                    if !speakBGAlways.value {
+                        Toggle("Low", isOn: $speakLowBG.value.animation())
+                            .onChange(of: speakLowBG.value) { newValue in
+                                if newValue {
+                                    speakProactiveLowBG.value = false
+                                }
+                            }
+
+                        Toggle("Proactive Low", isOn: $speakProactiveLowBG.value.animation())
+                            .onChange(of: speakProactiveLowBG.value) { newValue in
+                                if newValue {
+                                    speakLowBG.value = false
+                                }
+                            }
+
+                        if speakLowBG.value || speakProactiveLowBG.value {
+                            BGPicker(
+                                title: "Low BG Limit",
+                                range: 40 ... 108,
+                                value: $speakLowBGLimit.value
+                            )
                         }
 
-                        Toggle("Always", isOn: $speakBGAlways.value.animation())
+                        if speakProactiveLowBG.value {
+                            BGPicker(
+                                title: "Fast Drop Delta",
+                                range: 3 ... 20,
+                                value: $speakFastDropDelta.value
+                            )
+                        }
 
-                        if !speakBGAlways.value {
-                            Toggle("Low", isOn: $speakLowBG.value.animation())
-                                .onChange(of: speakLowBG.value) { newValue in
-                                    if newValue {
-                                        speakProactiveLowBG.value = false
-                                    }
-                                }
+                        Toggle("High", isOn: $speakHighBG.value.animation())
 
-                            Toggle("Proactive Low", isOn: $speakProactiveLowBG.value.animation())
-                                .onChange(of: speakProactiveLowBG.value) { newValue in
-                                    if newValue {
-                                        speakLowBG.value = false
-                                    }
-                                }
-
-                            if speakLowBG.value || speakProactiveLowBG.value {
-                                BGPicker(
-                                    title: "Low BG Limit",
-                                    range: 40 ... 108,
-                                    value: $speakLowBGLimit.value
-                                )
-                            }
-
-                            if speakProactiveLowBG.value {
-                                BGPicker(
-                                    title: "Fast Drop Delta",
-                                    range: 3 ... 20,
-                                    value: $speakFastDropDelta.value
-                                )
-                            }
-
-                            Toggle("High", isOn: $speakHighBG.value.animation())
-
-                            if speakHighBG.value {
-                                BGPicker(
-                                    title: "High BG Limit",
-                                    range: 140 ... 300,
-                                    value: $speakHighBGLimit.value
-                                )
-                            }
+                        if speakHighBG.value {
+                            BGPicker(
+                                title: "High BG Limit",
+                                range: 140 ... 300,
+                                value: $speakHighBGLimit.value
+                            )
                         }
                     }
                 }
             }
-            .sheet(item: $activeInfoSheet) { sheet in
-                switch sheet {
-                case .appSettings: appSettingsInfoSheet
-                case .display: displayInfoSheet
-                case .speakBG: speakBGInfoSheet
-                }
+
+            Section("Diagnostics") {
+                Toggle("Send anonymous usage stats", isOn: $telemetryEnabled.value)
+                NavigationLink("What's sent") { TelemetryPreviewView() }
+                NavigationLink("Privacy") { TelemetryPrivacyView() }
+            }
+        }
+        .sheet(item: $activeInfoSheet) { sheet in
+            switch sheet {
+            case .appSettings: appSettingsInfoSheet
+            case .display: displayInfoSheet
+            case .speakBG: speakBGInfoSheet
             }
         }
         .preferredColorScheme(Storage.shared.appearanceMode.value.colorScheme)

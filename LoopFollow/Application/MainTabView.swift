@@ -5,6 +5,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject private var selectedTab = Observable.shared.selectedTabIndex
+    @ObservedObject private var appearanceMode = Storage.shared.appearanceMode
     @ObservedObject private var homePosition = Storage.shared.homePosition
     @ObservedObject private var alarmsPosition = Storage.shared.alarmsPosition
     @ObservedObject private var remotePosition = Storage.shared.remotePosition
@@ -35,7 +36,7 @@ struct MainTabView: View {
             }
             .tag(4)
         }
-        .preferredColorScheme(Storage.shared.appearanceMode.value.colorScheme)
+        .preferredColorScheme(appearanceMode.value.colorScheme)
     }
 
     @ViewBuilder

@@ -45,6 +45,13 @@ extension Storage {
         // else: default "TIR" is already set
     }
 
+    func migrateStep9() {
+        // Default for debugLogLevel changed from false to true so users ship useful
+        // logs when they report a problem. Force-enable for existing users.
+        LogManager.shared.log(category: .general, message: "Running migrateStep9 — enabling debug log level")
+        debugLogLevel.value = true
+    }
+
     func migrateStep7() {
         // Cancel notifications scheduled with old hardcoded identifiers.
         // Replaced with bundle-ID-scoped identifiers for multi-instance support.

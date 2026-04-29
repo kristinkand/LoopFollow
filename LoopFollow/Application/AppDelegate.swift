@@ -2,13 +2,11 @@
 // AppDelegate.swift
 
 import AVFoundation
-import CoreData
 import EventKit
 import UIKit
 import UserNotifications
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
     let notificationCenter = UNUserNotificationCenter.current()
     private let speechSynthesizer = AVSpeechSynthesizer()
 
@@ -50,6 +48,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         BackgroundRefreshManager.shared.register()
+
+        // Telemetry: every cold launch (foreground or background) is a chance
+        // to send a check-in. Internally gated by consent, the toggle, and the
+        // 7-day / build-SHA trigger. Hooking didFinishLaunchingWithOptions in
+        // addition to the SwiftUI scenePhase hook in LoopFollowApp ensures
+        // background launches (silent push wake, BG app refresh) keep the
+        // cadence honest for users who rarely foreground the app — important
+        // for a follower app whose users mostly read state via widgets / live
+        // activities. See Helpers/Telemetry.swift.
+        TelemetryClient.shared.recordColdLaunch()
+        Task.detached { await TelemetryClient.shared.maybeSend() }
 
         // Detect Before-First-Unlock launch. isProtectedDataAvailable returns false
         // for ANY locked-screen background launch, not only post-reboot. Standard
@@ -146,54 +155,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
     }
 
-    // MARK: - Core Data stack
-
-    lazy var persistentContainer: NSPersistentCloudKitContainer = {
-        /*
-         The persistent container for the application. This implementation
-         creates and returns a container, having loaded the store for the
-         application to it. This property is optional since there are legitimate
-         error conditions that could cause the creation of the store to fail.
-         */
-        let container = NSPersistentCloudKitContainer(name: "LoopFollow")
-        container.loadPersistentStores(completionHandler: { _, error in
-            if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            }
-        })
-        return container
-    }()
-
-    // MARK: - Core Data Saving support
-
-    func saveContext() {
-        let context = persistentContainer.viewContext
-        if context.hasChanges {
-            do {
-                try context.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nserror = error as NSError
-                fatalError("Unresolved error \(nserror), \(nserror.userInfo)")
-            }
-        }
-    }
-
     func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if response.actionIdentifier == "OPEN_APP_ACTION" {
-            // Switch to Home tab
+            // Dismiss any presented modal/sheet so the user actually sees Home
+            UIApplication.shared.topMost?.dismiss(animated: true)
             Observable.shared.selectedTabIndex.value = 0
         }
 

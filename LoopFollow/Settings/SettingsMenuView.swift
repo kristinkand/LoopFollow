@@ -5,19 +5,7 @@ import SwiftUI
 import UIKit
 
 struct SettingsMenuView: View {
-    // MARK: - Observed Objects
-
     @ObservedObject private var nightscoutURL = Storage.shared.url
-
-    // MARK: – Local state
-
-    var onBack: (() -> Void)?
-
-    // MARK: – Observed objects
-
-    @ObservedObject private var url = Storage.shared.url
-
-    // MARK: – Body
 
     var body: some View {
         List {
@@ -96,15 +84,6 @@ struct SettingsMenuView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if let onBack {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                    }
-                }
-            }
-        }
     }
 
     // MARK: – Section builders
@@ -202,7 +181,14 @@ import UIKit
 
 extension UIApplication {
     var topMost: UIViewController? {
-        guard var top = keyWindow?.rootViewController else { return nil }
+        // `keyWindow` is deprecated and returns nil on Mac Catalyst / multi-window iPad.
+        // Walk connected scenes instead and prefer the foreground-active one.
+        let windowScenes = connectedScenes.compactMap { $0 as? UIWindowScene }
+        let activeScene = windowScenes.first { $0.activationState == .foregroundActive }
+            ?? windowScenes.first
+        let rootVC = activeScene?.windows.first(where: \.isKeyWindow)?.rootViewController
+            ?? activeScene?.windows.first?.rootViewController
+        guard var top = rootVC else { return nil }
         while let presented = top.presentedViewController {
             top = presented
         }

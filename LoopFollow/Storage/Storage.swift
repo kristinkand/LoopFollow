@@ -39,7 +39,7 @@ class Storage {
 
     var selectedBLEDevice = StorageValue<BLEDevice?>(key: "selectedBLEDevice", defaultValue: nil)
 
-    var debugLogLevel = StorageValue<Bool>(key: "debugLogLevel", defaultValue: false)
+    var debugLogLevel = StorageValue<Bool>(key: "debugLogLevel", defaultValue: true)
 
     var contactTrend = StorageValue<ContactIncludeOption>(key: "contactTrend", defaultValue: .off)
     var contactDelta = StorageValue<ContactIncludeOption>(key: "contactDelta", defaultValue: .off)
@@ -185,6 +185,19 @@ class Storage {
     var lastBlacklistNotificationShown = StorageValue<Date?>(key: "lastBlacklistNotificationShown", defaultValue: nil)
     var lastVersionUpdateNotificationShown = StorageValue<Date?>(key: "lastVersionUpdateNotificationShown", defaultValue: nil)
     var lastExpirationNotificationShown = StorageValue<Date?>(key: "lastExpirationNotificationShown", defaultValue: nil)
+
+    // MARK: - Telemetry -----------------------------------------------------------
+
+    // See LoopFollow/Helpers/Telemetry.swift.
+
+    var telemetryEnabled = StorageValue<Bool>(key: "telemetryEnabled", defaultValue: true)
+    var telemetryConsentDecisionMade = StorageValue<Bool>(key: "telemetryConsentDecisionMade", defaultValue: false)
+    var telemetryClientId = StorageValue<String?>(key: "telemetryClientId", defaultValue: nil)
+    var telemetryLastSentAt = StorageValue<Date?>(key: "telemetryLastSentAt", defaultValue: nil)
+    var telemetryLastSentSha = StorageValue<String>(key: "telemetryLastSentSha", defaultValue: "")
+
+    // Sliding 7-day window of cold-launch timestamps.
+    var telemetryColdLaunchTimes = StorageValue<[Date]>(key: "telemetryColdLaunchTimes", defaultValue: [])
 
     var hideInfoTable = StorageValue<Bool>(key: "hideInfoTable", defaultValue: false)
     var token = StorageValue<String>(key: "token", defaultValue: "")

@@ -8,7 +8,6 @@ struct GeneralSettingsView: View {
     @ObservedObject var appBadge = Storage.shared.appBadge
     @ObservedObject var appearanceMode = Storage.shared.appearanceMode
     @ObservedObject var showStats = Storage.shared.showStats
-    @ObservedObject var useIFCC = Storage.shared.useIFCC
     @ObservedObject var showSmallGraph = Storage.shared.showSmallGraph
     @ObservedObject var screenlockSwitchState = Storage.shared.screenlockSwitchState
     @ObservedObject var showDisplayName = Storage.shared.showDisplayName
@@ -29,114 +28,260 @@ struct GeneralSettingsView: View {
     @ObservedObject var speakHighBG = Storage.shared.speakHighBG
     @ObservedObject var speakHighBGLimit = Storage.shared.speakHighBGLimit
 
+    @State private var activeInfoSheet: InfoSheet?
+
+    private enum InfoSheet: Identifiable {
+        case appSettings, display, speakBG
+        var id: Self { self }
+    }
+
+    // Telemetry — see LoopFollow/Helpers/Telemetry.swift
+    @ObservedObject var telemetryEnabled = Storage.shared.telemetryEnabled
+
     var body: some View {
-        NavigationView {
-            Form {
-                Section("App Settings") {
-                    Toggle("Display App Badge", isOn: $appBadge.value)
-                    Toggle("Persistent Notification", isOn: $persistentNotification.value)
-                }
+        Form {
+            Section(header: sectionHeader("App Settings", sheet: .appSettings)) {
+                Toggle("Display App Badge", isOn: $appBadge.value)
+                Toggle("Persistent Notification", isOn: $persistentNotification.value)
+            }
 
-                Section("Display") {
-                    Picker("Appearance", selection: $appearanceMode.value) {
-                        ForEach(AppearanceMode.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    Toggle("Display Stats", isOn: $showStats.value)
-                    Toggle("Use IFCC A1C", isOn: $useIFCC.value)
-                    Toggle("Display Small Graph", isOn: $showSmallGraph.value)
-                    Toggle("Color BG Text", isOn: $colorBGText.value)
-                    Toggle("Keep Screen Active", isOn: $screenlockSwitchState.value)
-                    Toggle("Show Display Name", isOn: $showDisplayName.value)
-                    Toggle("Snoozer emoji", isOn: $snoozerEmoji.value)
-                    Toggle("Force portrait mode", isOn: $forcePortraitMode.value)
-                        .onChange(of: forcePortraitMode.value) { _ in
-                            let window = UIApplication.shared.connectedScenes
-                                .compactMap { $0 as? UIWindowScene }
-                                .flatMap { $0.windows }
-                                .first
-
-                            window?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
-                        }
-                }
-
-                Section("Time Zone") {
-                    Toggle("Time Zone Override", isOn: $graphTimeZoneEnabled.value)
-                        .onChange(of: graphTimeZoneEnabled.value) { _ in markChartSettingsDirty() }
-
-                    if graphTimeZoneEnabled.value {
-                        Picker("Time Zone", selection: $graphTimeZoneIdentifier.value) {
-                            ForEach(Self.sortedTimeZones, id: \.identifier) { tz in
-                                Text(Self.timeZoneLabel(tz)).tag(tz.identifier)
-                            }
-                        }
-                        .onChange(of: graphTimeZoneIdentifier.value) { _ in markChartSettingsDirty() }
+            Section(header: sectionHeader("Display", sheet: .display)) {
+                Picker("Appearance", selection: $appearanceMode.value) {
+                    ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
                     }
                 }
+                Toggle("Display Stats", isOn: $showStats.value)
+                Toggle("Display Small Graph", isOn: $showSmallGraph.value)
+                Toggle("Color BG Text", isOn: $colorBGText.value)
+                Toggle("Keep Screen Active", isOn: $screenlockSwitchState.value)
+                Toggle("Show Display Name", isOn: $showDisplayName.value)
+                Toggle("Snoozer emoji", isOn: $snoozerEmoji.value)
+                Toggle("Force portrait mode", isOn: $forcePortraitMode.value)
+                    .onChange(of: forcePortraitMode.value) { _ in
+                        let window = UIApplication.shared.connectedScenes
+                            .compactMap { $0 as? UIWindowScene }
+                            .flatMap { $0.windows }
+                            .first
 
-                Section("Speak BG") {
-                    Toggle("Speak BG", isOn: $speakBG.value.animation())
+                        window?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+                    }
+            }
 
-                    if speakBG.value {
-                        Picker("Language", selection: $speakLanguage.value) {
-                            Text("English").tag("en")
-                            Text("French").tag("fr")
-                            Text("Italian").tag("it")
-                            Text("Slovak").tag("sk")
-                            Text("Swedish").tag("sv")
+            Section("Time Zone") {
+                Toggle("Time Zone Override", isOn: $graphTimeZoneEnabled.value)
+                    .onChange(of: graphTimeZoneEnabled.value) { _ in markChartSettingsDirty() }
+
+                if graphTimeZoneEnabled.value {
+                    Picker("Time Zone", selection: $graphTimeZoneIdentifier.value) {
+                        ForEach(Self.sortedTimeZones, id: \.identifier) { tz in
+                            Text(Self.timeZoneLabel(tz)).tag(tz.identifier)
                         }
+                    }
+                    .onChange(of: graphTimeZoneIdentifier.value) { _ in markChartSettingsDirty() }
+                }
+            }
 
-                        Toggle("Always", isOn: $speakBGAlways.value.animation())
+            Section(header: sectionHeader("Speak BG", sheet: .speakBG)) {
+                Toggle("Speak BG", isOn: $speakBG.value.animation())
 
-                        if !speakBGAlways.value {
-                            Toggle("Low", isOn: $speakLowBG.value.animation())
-                                .onChange(of: speakLowBG.value) { newValue in
-                                    if newValue {
-                                        speakProactiveLowBG.value = false
-                                    }
+                if speakBG.value {
+                    Picker("Language", selection: $speakLanguage.value) {
+                        Text("English").tag("en")
+                        Text("French").tag("fr")
+                        Text("Italian").tag("it")
+                        Text("Slovak").tag("sk")
+                        Text("Swedish").tag("sv")
+                    }
+
+                    Toggle("Always", isOn: $speakBGAlways.value.animation())
+
+                    if !speakBGAlways.value {
+                        Toggle("Low", isOn: $speakLowBG.value.animation())
+                            .onChange(of: speakLowBG.value) { newValue in
+                                if newValue {
+                                    speakProactiveLowBG.value = false
                                 }
+                            }
 
-                            Toggle("Proactive Low", isOn: $speakProactiveLowBG.value.animation())
-                                .onChange(of: speakProactiveLowBG.value) { newValue in
-                                    if newValue {
-                                        speakLowBG.value = false
-                                    }
+                        Toggle("Proactive Low", isOn: $speakProactiveLowBG.value.animation())
+                            .onChange(of: speakProactiveLowBG.value) { newValue in
+                                if newValue {
+                                    speakLowBG.value = false
                                 }
-
-                            if speakLowBG.value || speakProactiveLowBG.value {
-                                BGPicker(
-                                    title: "Low BG Limit",
-                                    range: 40 ... 108,
-                                    value: $speakLowBGLimit.value
-                                )
                             }
 
-                            if speakProactiveLowBG.value {
-                                BGPicker(
-                                    title: "Fast Drop Delta",
-                                    range: 3 ... 20,
-                                    value: $speakFastDropDelta.value
-                                )
-                            }
+                        if speakLowBG.value || speakProactiveLowBG.value {
+                            BGPicker(
+                                title: "Low BG Limit",
+                                range: 40 ... 108,
+                                value: $speakLowBGLimit.value
+                            )
+                        }
 
-                            Toggle("High", isOn: $speakHighBG.value.animation())
+                        if speakProactiveLowBG.value {
+                            BGPicker(
+                                title: "Fast Drop Delta",
+                                range: 3 ... 20,
+                                value: $speakFastDropDelta.value
+                            )
+                        }
 
-                            if speakHighBG.value {
-                                BGPicker(
-                                    title: "High BG Limit",
-                                    range: 140 ... 300,
-                                    value: $speakHighBGLimit.value
-                                )
-                            }
+                        Toggle("High", isOn: $speakHighBG.value.animation())
+
+                        if speakHighBG.value {
+                            BGPicker(
+                                title: "High BG Limit",
+                                range: 140 ... 300,
+                                value: $speakHighBGLimit.value
+                            )
                         }
                     }
                 }
+            }
+
+            Section("Diagnostics") {
+                Toggle("Send anonymous usage stats", isOn: $telemetryEnabled.value)
+                NavigationLink("What's sent") { TelemetryPreviewView() }
+                NavigationLink("Privacy") { TelemetryPrivacyView() }
+            }
+        }
+        .sheet(item: $activeInfoSheet) { sheet in
+            switch sheet {
+            case .appSettings: appSettingsInfoSheet
+            case .display: displayInfoSheet
+            case .speakBG: speakBGInfoSheet
             }
         }
         .preferredColorScheme(Storage.shared.appearanceMode.value.colorScheme)
         .navigationBarTitle("General Settings", displayMode: .inline)
     }
+
+    // MARK: - Section Header
+
+    private func sectionHeader(_ title: String, sheet: InfoSheet) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+            Button {
+                activeInfoSheet = sheet
+            } label: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Info Sheets
+
+    private var appSettingsInfoSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Display App Badge")
+                        .font(.headline)
+                    Text("Shows the current glucose value on the app icon. For the badge to stay current, you need to enable a Background Refresh option — otherwise it will go stale when the app is in the background.")
+
+                    Text("Persistent Notification")
+                        .font(.headline)
+                    Text("When enabled, glucose is reported as a notification with every update. This is typically left disabled.")
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("App Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeInfoSheet = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var displayInfoSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Display Stats")
+                        .font(.headline)
+                    Text("Shows 24-hour statistics (time in range, average BG, estimated A1C, standard deviation) on the Home screen.")
+
+                    Text("Use IFCC A1C")
+                        .font(.headline)
+                    Text("Displays estimated A1C in mmol/mol (IFCC) instead of the default % (NGSP/DCCT). Common in many countries outside the US.")
+
+                    Text("Display Small Graph")
+                        .font(.headline)
+                    Text("Shows a full history graph below the main plot. The history length is determined by the \"Days Back\" setting in Graph settings.")
+
+                    Text("Color BG Text")
+                        .font(.headline)
+                    Text("Uses colors to highlight glucose values — red for low, green for in range, and yellow for high — across the app.")
+
+                    Text("Keep Screen Active")
+                        .font(.headline)
+                    Text("Overrides your phone's auto-lock setting to keep the screen on. This works whether plugged in or not, so remember to lock the screen manually to conserve battery.")
+
+                    Text("Show Display Name")
+                        .font(.headline)
+                    Text("Shows the app name on the Home screen. Useful when following more than one person, to tell multiple LoopFollow instances apart.")
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("Display Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeInfoSheet = nil }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var speakBGInfoSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("When enabled, LoopFollow speaks glucose values aloud. You can choose to have it speak every reading, or only when glucose is outside a range you define.")
+
+                    Text("Always vs. Conditional")
+                        .font(.headline)
+                    Text("\"Always\" speaks every glucose reading. When off, you can selectively enable speaking for low and/or high values only.")
+
+                    Text("Low vs. Proactive Low")
+                        .font(.headline)
+                    Text(verbatim: """
+                    These are mutually exclusive:
+                    • Low — speaks when glucose is at or below the Low BG Limit
+                    • Proactive Low — speaks when glucose is below the limit OR dropping fast (exceeding the Fast Drop Delta), even if still above the limit
+                    """)
+
+                    Text("Fast Drop Delta")
+                        .font(.headline)
+                    Text("Only available with Proactive Low. Sets the rate of change threshold (in mg/dL or mmol/L per reading) that triggers a spoken alert even when glucose is still above the Low BG Limit.")
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("Speak BG")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeInfoSheet = nil }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Helpers
 
     private func markChartSettingsDirty() {
         Observable.shared.chartSettingsChanged.value = true

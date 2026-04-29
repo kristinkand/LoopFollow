@@ -39,7 +39,7 @@ class Storage {
 
     var selectedBLEDevice = StorageValue<BLEDevice?>(key: "selectedBLEDevice", defaultValue: nil)
 
-    var debugLogLevel = StorageValue<Bool>(key: "debugLogLevel", defaultValue: false)
+    var debugLogLevel = StorageValue<Bool>(key: "debugLogLevel", defaultValue: true)
 
     var contactTrend = StorageValue<ContactIncludeOption>(key: "contactTrend", defaultValue: .off)
     var contactDelta = StorageValue<ContactIncludeOption>(key: "contactDelta", defaultValue: .off)
@@ -93,6 +93,7 @@ class Storage {
     var lastBgReadingTimeSeconds = StorageValue<TimeInterval?>(key: "lastBgReadingTimeSeconds", defaultValue: nil)
     var lastDeltaMgdl = StorageValue<Double?>(key: "lastDeltaMgdl", defaultValue: nil)
     var lastTrendCode = StorageValue<String?>(key: "lastTrendCode", defaultValue: nil)
+    var lastBgMgdl = StorageValue<Double?>(key: "lastBgMgdl", defaultValue: nil)
     var lastIOB = StorageValue<Double?>(key: "lastIOB", defaultValue: nil)
     var lastCOB = StorageValue<Double?>(key: "lastCOB", defaultValue: nil)
     var projectedBgMgdl = StorageValue<Double?>(key: "projectedBgMgdl", defaultValue: nil)
@@ -116,6 +117,9 @@ class Storage {
     var laEnabled = StorageValue<Bool>(key: "laEnabled", defaultValue: false)
     var laRenewBy = StorageValue<TimeInterval>(key: "laRenewBy", defaultValue: 0)
     var laRenewalFailed = StorageValue<Bool>(key: "laRenewalFailed", defaultValue: false)
+    var laPushToStartToken = StorageValue<String>(key: "laPushToStartToken", defaultValue: "")
+    var laLastPushToStartAt = StorageValue<TimeInterval>(key: "laLastPushToStartAt", defaultValue: 0)
+    var laPushToStartBackoff = StorageValue<TimeInterval>(key: "laPushToStartBackoff", defaultValue: 0)
 
     // Graph Settings [BEGIN]
     var showDots = StorageValue<Bool>(key: "showDots", defaultValue: true)
@@ -130,6 +134,7 @@ class Storage {
 
     var smallGraphHeight = StorageValue<Int>(key: "smallGraphHeight", defaultValue: 40)
     var predictionToLoad = StorageValue<Double>(key: "predictionToLoad", defaultValue: 1.0)
+    var predictionDisplayType = StorageValue<PredictionDisplayType>(key: "predictionDisplayType", defaultValue: .cone)
     var minBasalScale = StorageValue<Double>(key: "minBasalScale", defaultValue: 5.0)
     var minBGScale = StorageValue<Double>(key: "minBGScale", defaultValue: 250.0)
     var lowLine = StorageValue<Double>(key: "lowLine", defaultValue: 70.0)
@@ -181,9 +186,23 @@ class Storage {
     var lastVersionUpdateNotificationShown = StorageValue<Date?>(key: "lastVersionUpdateNotificationShown", defaultValue: nil)
     var lastExpirationNotificationShown = StorageValue<Date?>(key: "lastExpirationNotificationShown", defaultValue: nil)
 
+    // MARK: - Telemetry -----------------------------------------------------------
+
+    // See LoopFollow/Helpers/Telemetry.swift.
+
+    var telemetryEnabled = StorageValue<Bool>(key: "telemetryEnabled", defaultValue: true)
+    var telemetryConsentDecisionMade = StorageValue<Bool>(key: "telemetryConsentDecisionMade", defaultValue: false)
+    var telemetryClientId = StorageValue<String?>(key: "telemetryClientId", defaultValue: nil)
+    var telemetryLastSentAt = StorageValue<Date?>(key: "telemetryLastSentAt", defaultValue: nil)
+    var telemetryLastSentSha = StorageValue<String>(key: "telemetryLastSentSha", defaultValue: "")
+
+    // Sliding 7-day window of cold-launch timestamps.
+    var telemetryColdLaunchTimes = StorageValue<[Date]>(key: "telemetryColdLaunchTimes", defaultValue: [])
+
     var hideInfoTable = StorageValue<Bool>(key: "hideInfoTable", defaultValue: false)
     var token = StorageValue<String>(key: "token", defaultValue: "")
     var units = StorageValue<String>(key: "units", defaultValue: "mg/dL")
+    var hasConfiguredUnits = StorageValue<Bool>(key: "hasConfiguredUnits", defaultValue: false)
 
     var infoSort = StorageValue<[Int]>(key: "infoSort", defaultValue: InfoType.allCases.map(\.sortOrder))
     var infoVisible = StorageValue<[Bool]>(key: "infoVisible", defaultValue: InfoType.allCases.map(\.defaultVisible))
@@ -192,6 +211,7 @@ class Storage {
     var device = StorageValue<String>(key: "device", defaultValue: "")
     var nsWriteAuth = StorageValue<Bool>(key: "nsWriteAuth", defaultValue: false)
     var nsAdminAuth = StorageValue<Bool>(key: "nsAdminAuth", defaultValue: false)
+    var webSocketEnabled = StorageValue<Bool>(key: "webSocketEnabled", defaultValue: true)
 
     var migrationStep = StorageValue<Int>(key: "migrationStep", defaultValue: 0)
 
@@ -215,10 +235,14 @@ class Storage {
 
     var bolusIncrement = SecureStorageValue<HKQuantity>(key: "bolusIncrement", defaultValue: HKQuantity(unit: .internationalUnit(), doubleValue: 0.05))
     var bolusIncrementDetected = StorageValue<Bool>(key: "bolusIncrementDetected", defaultValue: false)
+
+    var remoteBolusHistory = StorageValue<[RemoteBolusHistoryEntry]>(key: "remoteBolusHistory", defaultValue: [])
+    var remoteMealHistory = StorageValue<[RemoteMealHistoryEntry]>(key: "remoteMealHistory", defaultValue: [])
     // Statistics display preferences
     var showGMI = StorageValue<Bool>(key: "showGMI", defaultValue: true)
     var showStdDev = StorageValue<Bool>(key: "showStdDev", defaultValue: true)
     var showTITR = StorageValue<Bool>(key: "showTITR", defaultValue: false)
+    var timeInRangeModeRaw = StorageValue<String>(key: "timeInRangeMode", defaultValue: "TIR")
 
     static let shared = Storage()
     private init() {}
@@ -303,6 +327,7 @@ class Storage {
         lastBgReadingTimeSeconds.reload()
         lastDeltaMgdl.reload()
         lastTrendCode.reload()
+        lastBgMgdl.reload()
         lastIOB.reload()
         lastCOB.reload()
         projectedBgMgdl.reload()
@@ -324,6 +349,9 @@ class Storage {
         laEnabled.reload()
         laRenewBy.reload()
         laRenewalFailed.reload()
+        laPushToStartToken.reload()
+        laLastPushToStartAt.reload()
+        laPushToStartBackoff.reload()
 
         showDots.reload()
         showLines.reload()
@@ -336,6 +364,7 @@ class Storage {
         smallGraphTreatments.reload()
         smallGraphHeight.reload()
         predictionToLoad.reload()
+        predictionDisplayType.reload()
         minBasalScale.reload()
         minBGScale.reload()
         lowLine.reload()
@@ -404,9 +433,12 @@ class Storage {
 
         loopAPNSQrCodeURL.reload()
         bolusIncrementDetected.reload()
+        remoteBolusHistory.reload()
+        remoteMealHistory.reload()
         showGMI.reload()
         showStdDev.reload()
         showTITR.reload()
+        timeInRangeModeRaw.reload()
     }
 
     // MARK: - Tab Position Helpers

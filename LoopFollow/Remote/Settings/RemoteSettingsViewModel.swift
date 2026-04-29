@@ -57,7 +57,7 @@ class RemoteSettingsViewModel: ObservableObject {
             }
             return loopFollowTeamID != targetTeamId
 
-        case .none, .nightscout:
+        case .none:
             return false
         }
     }
@@ -201,7 +201,7 @@ class RemoteSettingsViewModel: ObservableObject {
                 self.remoteType = .loopAPNS
                 self.isLoopDevice = true
                 self.isTrioDevice = false
-                LogManager.shared.log(category: .apns, message: "Loop APNS QR code scanned: \(code)")
+                LogManager.shared.log(category: .apns, message: "Loop APNS QR code scanned: \(LogRedactor.fingerprint(code))")
             case let .failure(error):
                 self.loopAPNSErrorMessage = "Scanning failed: \(error.localizedDescription)"
             }

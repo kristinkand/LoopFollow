@@ -176,6 +176,10 @@ extension MainViewController {
                 TaskScheduler.shared.rescheduleTask(id: .alarmCheck, to: Date().addingTimeInterval(3))
             }
 
+            if NightscoutSocketManager.shared.connectionState == .authenticated {
+                delayToSchedule = max(delayToSchedule * 3, 60)
+            }
+
             TaskScheduler.shared.rescheduleTask(id: .fetchBG, to: Date().addingTimeInterval(delayToSchedule))
 
             // Evaluate speak conditions if there is a previous value.
@@ -212,9 +216,9 @@ extension MainViewController {
 
     func updateServerText(with serverText: String? = nil) {
         if Storage.shared.showDisplayName.value, let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String {
-            self.serverText.text = displayName
+            Observable.shared.serverText.value = displayName
         } else if let serverText = serverText {
-            self.serverText.text = serverText
+            Observable.shared.serverText.value = serverText
         }
     }
 
@@ -268,6 +272,7 @@ extension MainViewController {
 
             // Live Activity storage
             Storage.shared.lastBgReadingTimeSeconds.value = lastBGTime
+            Storage.shared.lastBgMgdl.value = Double(latestBG)
             Storage.shared.lastDeltaMgdl.value = Double(deltaBG)
             Storage.shared.lastTrendCode.value = entries[latestEntryIndex].direction
 

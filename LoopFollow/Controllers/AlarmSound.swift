@@ -88,7 +88,7 @@ class AlarmSound {
             audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
             audioPlayer!.delegate = audioPlayerDelegate
 
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: sessionCategoryOptions())
             try AVAudioSession.sharedInstance().setActive(true)
 
             audioPlayer?.numberOfLoops = 0
@@ -126,7 +126,7 @@ class AlarmSound {
             audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
             audioPlayer!.delegate = audioPlayerDelegate
 
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: sessionCategoryOptions())
             try AVAudioSession.sharedInstance().setActive(true)
 
             // Only use numberOfLoops if we're not using delay-based repeating
@@ -184,7 +184,7 @@ class AlarmSound {
                 audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
                 audioPlayer!.delegate = audioPlayerDelegate
 
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: sessionCategoryOptions())
                 try AVAudioSession.sharedInstance().setActive(true)
 
                 audioPlayer!.numberOfLoops = 0
@@ -213,7 +213,7 @@ class AlarmSound {
             audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
             audioPlayer!.delegate = audioPlayerDelegate
 
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: sessionCategoryOptions())
             try AVAudioSession.sharedInstance().setActive(true)
 
             // Play endless loops
@@ -262,12 +262,24 @@ class AlarmSound {
 
     fileprivate static func enableAudio() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: sessionCategoryOptions())
             try AVAudioSession.sharedInstance().setActive(true)
             LogManager.shared.log(category: .alarm, message: "Audio session configured for alarm playback")
         } catch {
             LogManager.shared.log(category: .alarm, message: "Enable audio error: \(error)")
         }
+    }
+
+    // Background activation of a non-mixable .playback session is denied by iOS
+    // (cannotInterruptOthers, 560557684) unless the app is already actively playing
+    // audio. In foreground, or with Silent Tune holding a mixable session alive,
+    // the legacy options: [] succeeds and lets the alarm dominate other audio.
+    // For Bluetooth-heartbeat users with no Silent Tune, fall back to .duckOthers
+    // (mixable + ducks others) so activation is permitted from background.
+    fileprivate static func sessionCategoryOptions() -> AVAudioSession.CategoryOptions {
+        let inBackgroundWithoutSilentTune = UIApplication.shared.applicationState != .active
+            && Storage.shared.backgroundRefreshType.value != .silentTune
+        return inBackgroundWithoutSilentTune ? .duckOthers : []
     }
 }
 
@@ -325,7 +337,11 @@ extension MPVolumeView {
             slider?.value = volume
         }
         // Optional - Remove the HUD
-        if let app = UIApplication.shared.delegate as? AppDelegate, let window = app.window {
+        let activeWindow = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }?
+            .windows.first(where: \.isKeyWindow)
+        if let window = activeWindow {
             volumeView.alpha = 0.000001
             window.addSubview(volumeView)
         }

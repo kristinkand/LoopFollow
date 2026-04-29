@@ -16,124 +16,193 @@ struct GraphSettingsView: View {
 
     @ObservedObject private var smallGraphHeight = Storage.shared.smallGraphHeight
     @ObservedObject private var predictionToLoad = Storage.shared.predictionToLoad
+    @ObservedObject private var predictionDisplayType = Storage.shared.predictionDisplayType
     @ObservedObject private var minBasalScale = Storage.shared.minBasalScale
     @ObservedObject private var minBGScale = Storage.shared.minBGScale
-    @ObservedObject private var lowLine = Storage.shared.lowLine
-    @ObservedObject private var highLine = Storage.shared.highLine
     @ObservedObject private var downloadDays = Storage.shared.downloadDays
+
+    @State private var activeInfoSheet: InfoSheet?
+
+    private enum InfoSheet: Identifiable {
+        case scale, history
+        var id: Self { self }
+    }
 
     private var nightscoutEnabled: Bool { IsNightscoutEnabled() }
 
     var body: some View {
-        NavigationView {
-            Form {
-                // ── Graph Display ────────────────────────────────────────────
-                Section("Graph Display") {
-                    Toggle("Display Dots", isOn: $showDots.value)
-                        .onChange(of: showDots.value) { _ in markDirty() }
+        Form {
+            // ── Graph Display ────────────────────────────────────────────
+            Section("Graph Display") {
+                Toggle("Display Dots", isOn: $showDots.value)
+                    .onChange(of: showDots.value) { _ in markDirty() }
 
-                    Toggle("Display Lines", isOn: $showLines.value)
-                        .onChange(of: showLines.value) { _ in markDirty() }
+                Toggle("Display Lines", isOn: $showLines.value)
+                    .onChange(of: showLines.value) { _ in markDirty() }
 
-                    if nightscoutEnabled {
-                        Toggle("Show DIA Lines", isOn: $showDIALines.value)
-                            .onChange(of: showDIALines.value) { _ in markDirty() }
-
-                        Toggle("Show −30 min Line", isOn: $show30MinLine.value)
-                            .onChange(of: show30MinLine.value) { _ in markDirty() }
-
-                        Toggle("Show −90 min Line", isOn: $show90MinLine.value)
-                            .onChange(of: show90MinLine.value) { _ in markDirty() }
-                    }
-
-                    Toggle("Show Midnight Lines", isOn: $showMidnightLines.value)
-                        .onChange(of: showMidnightLines.value) { _ in markDirty() }
-                }
-
-                // ── Treatments ───────────────────────────────────────────────
                 if nightscoutEnabled {
-                    Section("Treatments") {
-                        Toggle("Show Carb/Bolus Values", isOn: $showValues.value)
-                        Toggle("Show Carb Absorption", isOn: $showAbsorption.value)
-                        Toggle("Treatments on Small Graph",
-                               isOn: $smallGraphTreatments.value)
-                    }
+                    Toggle("Show DIA Lines", isOn: $showDIALines.value)
+                        .onChange(of: showDIALines.value) { _ in markDirty() }
+
+                    Toggle("Show −30 min Line", isOn: $show30MinLine.value)
+                        .onChange(of: show30MinLine.value) { _ in markDirty() }
+
+                    Toggle("Show −90 min Line", isOn: $show90MinLine.value)
+                        .onChange(of: show90MinLine.value) { _ in markDirty() }
                 }
 
-                // ── Small Graph ──────────────────────────────────────────────
-                Section("Small Graph") {
+                Toggle("Show Midnight Lines", isOn: $showMidnightLines.value)
+                    .onChange(of: showMidnightLines.value) { _ in markDirty() }
+            }
+
+            // ── Treatments ───────────────────────────────────────────────
+            if nightscoutEnabled {
+                Section("Treatments") {
+                    Toggle("Show Carb/Bolus Values", isOn: $showValues.value)
+                    Toggle("Show Carb Absorption", isOn: $showAbsorption.value)
+                    Toggle("Treatments on Small Graph",
+                           isOn: $smallGraphTreatments.value)
+                }
+            }
+
+            // ── Small Graph ──────────────────────────────────────────────
+            Section("Small Graph") {
+                SettingsStepperRow(
+                    title: "Height",
+                    range: 40 ... 80,
+                    step: 5,
+                    value: $smallGraphHeight.value,
+                    format: { "\(Int($0)) pt" }
+                )
+                .onChange(of: smallGraphHeight.value) { _ in markDirty() }
+            }
+
+            // ── Prediction ───────────────────────────────────────────────
+            if nightscoutEnabled {
+                Section("Prediction") {
                     SettingsStepperRow(
-                        title: "Height",
-                        range: 40 ... 80,
-                        step: 5,
-                        value: $smallGraphHeight.value,
-                        format: { "\(Int($0)) pt" }
+                        title: "Hours of Prediction",
+                        range: 0 ... 6,
+                        step: 0.25,
+                        value: $predictionToLoad.value,
+                        format: { "\($0.localized(maxFractionDigits: 2)) h" }
                     )
-                    .onChange(of: smallGraphHeight.value) { _ in markDirty() }
-                }
 
-                // ── Prediction ───────────────────────────────────────────────
-                if nightscoutEnabled {
-                    Section("Prediction") {
-                        SettingsStepperRow(
-                            title: "Hours of Prediction",
-                            range: 0 ... 6,
-                            step: 0.25,
-                            value: $predictionToLoad.value,
-                            format: { "\($0.localized(maxFractionDigits: 2)) h" }
-                        )
+                    if Storage.shared.device.value != "Loop" {
+                        Picker("Prediction Style", selection: $predictionDisplayType.value) {
+                            ForEach(PredictionDisplayType.allCases, id: \.self) { type in
+                                Text(type.displayName).tag(type)
+                            }
+                        }
+                        .onChange(of: predictionDisplayType.value) { _ in markDirty() }
                     }
                 }
+            }
 
-                // ── Basal / BG scale ─────────────────────────────────────────
-                if nightscoutEnabled {
-                    Section("Basal / BG Scale") {
-                        SettingsStepperRow(
-                            title: "Min Basal",
-                            range: 0.5 ... 20,
-                            step: 0.5,
-                            value: $minBasalScale.value,
-                            format: { "\($0.localized(maxFractionDigits: 1)) U/h" }
-                        )
+            // ── Basal / BG scale ─────────────────────────────────────────
+            if nightscoutEnabled {
+                Section(header: sectionHeader("Basal / BG Scale", sheet: .scale)) {
+                    SettingsStepperRow(
+                        title: "Min Basal",
+                        range: 0.5 ... 20,
+                        step: 0.5,
+                        value: $minBasalScale.value,
+                        format: { "\($0.localized(maxFractionDigits: 1)) U/h" }
+                    )
 
-                        BGPicker(
-                            title: "Min BG Scale",
-                            range: 40 ... 400,
-                            value: $minBGScale.value
-                        )
-                        .onChange(of: minBGScale.value) { _ in markDirty() }
-                    }
+                    BGPicker(
+                        title: "Min BG Scale",
+                        range: 40 ... 400,
+                        value: $minBGScale.value
+                    )
+                    .onChange(of: minBGScale.value) { _ in markDirty() }
                 }
+            }
 
-                // ── Target lines ─────────────────────────────────────────────
-                Section("Target Lines") {
-                    BGPicker(title: "Low BG Line",
-                             range: 40 ... 120,
-                             value: $lowLine.value)
-                        .onChange(of: lowLine.value) { _ in markDirty() }
-
-                    BGPicker(title: "High BG Line",
-                             range: 120 ... 400,
-                             value: $highLine.value)
-                        .onChange(of: highLine.value) { _ in markDirty() }
+            // ── History window ───────────────────────────────────────────
+            if nightscoutEnabled {
+                Section(header: sectionHeader("History", sheet: .history)) {
+                    SettingsStepperRow(
+                        title: "Show Days Back",
+                        range: 1 ... 4,
+                        step: 1,
+                        value: $downloadDays.value,
+                        format: { "\(Int($0)) d" }
+                    )
                 }
-
-                // ── History window ───────────────────────────────────────────
-                if nightscoutEnabled {
-                    Section("History") {
-                        SettingsStepperRow(
-                            title: "Show Days Back",
-                            range: 1 ... 4,
-                            step: 1,
-                            value: $downloadDays.value,
-                            format: { "\(Int($0)) d" }
-                        )
-                    }
-                }
+            }
+        }
+        .sheet(item: $activeInfoSheet) { sheet in
+            switch sheet {
+            case .scale: scaleInfoSheet
+            case .history: historyInfoSheet
             }
         }
         .preferredColorScheme(Storage.shared.appearanceMode.value.colorScheme)
         .navigationBarTitle("Graph Settings", displayMode: .inline)
+    }
+
+    // MARK: - Section Header
+
+    private func sectionHeader(_ title: String, sheet: InfoSheet) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+            Button {
+                activeInfoSheet = sheet
+            } label: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Info Sheets
+
+    private var scaleInfoSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Min Basal")
+                        .font(.headline)
+                    Text("Sets the minimum displayed range for the basal rate plot. The graph will always show at least this range, even if actual basal rates are lower.")
+
+                    Text("Min BG Scale")
+                        .font(.headline)
+                    Text("Sets the minimum displayed range for the glucose scale. The graph will always show at least up to this value, preventing the scale from compressing too tightly when glucose values are in a narrow range.")
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("Basal / BG Scale")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeInfoSheet = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var historyInfoSheet: some View {
+        NavigationStack {
+            ScrollView {
+                Text("Controls how many days of history are shown in the small graph and how much data is fetched from your Nightscout site. Higher values show more history but increase data usage.")
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("History")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeInfoSheet = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 
     /// Marks the chart as needing a redraw

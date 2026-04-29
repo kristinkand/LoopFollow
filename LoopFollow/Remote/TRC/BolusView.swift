@@ -14,6 +14,7 @@ struct BolusView: View {
 
     @ObservedObject private var deviceRecBolus = Observable.shared.deviceRecBolus
     @ObservedObject private var enactedOrSuggested = Observable.shared.enactedOrSuggested
+    @ObservedObject private var quickPickBoluses = QuickPickBolusesManager.shared
 
     @FocusState private var bolusFieldIsFocused: Bool
     @State private var showAlert = false
@@ -67,6 +68,30 @@ struct BolusView: View {
                 Form {
                     recommendedBlocks(now: context.date)
 
+                    if !quickPickBoluses.quickPickBoluses.isEmpty {
+                        Section(header: QuickPickSectionHeader(title: "Quick-Pick Boluses", infoText: QuickPickSectionHeader.bolusInfoText)) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(quickPickBoluses.quickPickBoluses) { bolus in
+                                        Button {
+                                            applyQuickPickBolus(bolus.units)
+                                        } label: {
+                                            Text("\(InsulinFormatter.shared.string(bolus.units))U")
+                                                .font(.subheadline.weight(.medium))
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 8)
+                                                .background(Color.accentColor.opacity(0.15))
+                                                .foregroundColor(.accentColor)
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+
                     Section {
                         HKQuantityInputView(
                             label: "Bolus Amount",
@@ -81,29 +106,48 @@ struct BolusView: View {
                             }
                         )
                     }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                        bolusFieldIsFocused = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            let rawValue = self.bolusAmount.doubleValue(for: .internationalUnit())
+                            let steppedAmount = roundedToStep(rawValue)
 
-                    LoadingButtonView(
-                        buttonText: "Send Bolus",
-                        progressText: "Sending Bolus...",
-                        isLoading: isLoading,
-                        action: {
-                            bolusFieldIsFocused = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                let rawValue = self.bolusAmount.doubleValue(for: .internationalUnit())
-                                let steppedAmount = roundedToStep(rawValue)
-
-                                if steppedAmount > 0 {
-                                    bolusAmount = HKQuantity(unit: .internationalUnit(), doubleValue: steppedAmount)
-                                    alertType = .confirmBolus
-                                    showAlert = true
-                                }
+                            if steppedAmount > 0 {
+                                bolusAmount = HKQuantity(unit: .internationalUnit(), doubleValue: steppedAmount)
+                                alertType = .confirmBolus
+                                showAlert = true
                             }
-                        },
-                        isDisabled: isLoading
-                    )
+                        }
+                    } label: {
+                        if isLoading {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Sending Bolus...")
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Send Bolus")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isLoading)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(.bar)
                 }
                 .navigationTitle("Bolus")
                 .navigationBarTitleDisplayMode(.inline)
+            }
+            .onAppear {
+                quickPickBoluses.refresh(
+                    stepIncrement: stepU,
+                    maxBolus: maxBolus.value.doubleValue(for: .internationalUnit())
+                )
             }
             .alert(isPresented: $showAlert) {
                 switch alertType {
@@ -245,6 +289,13 @@ struct BolusView: View {
         }
     }
 
+    private func applyQuickPickBolus(_ units: Double) {
+        let maxU = maxBolus.value.doubleValue(for: .internationalUnit())
+        let clamped = min(units, maxU)
+        let stepped = roundedToStep(clamped)
+        bolusAmount = HKQuantity(unit: .internationalUnit(), doubleValue: stepped)
+    }
+
     private func applyRecommendedBolus(_ rec: Double) {
         let maxU = maxBolus.value.doubleValue(for: .internationalUnit())
         let clamped = min(rec, maxU)
@@ -267,6 +318,10 @@ struct BolusView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 if success {
+                    let sentUnits = bolusAmount.doubleValue(for: .internationalUnit())
+                    if sentUnits > 0 {
+                        QuickPickBolusesManager.shared.recordBolus(units: sentUnits)
+                    }
                     statusMessage = "Bolus command sent successfully."
                     LogManager.shared.log(
                         category: .apns,

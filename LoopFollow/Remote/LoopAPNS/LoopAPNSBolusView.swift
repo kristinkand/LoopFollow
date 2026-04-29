@@ -13,6 +13,7 @@ struct LoopAPNSBolusView: View {
     @State private var alertMessage = ""
     @State private var alertType: AlertType = .success
 
+    @ObservedObject private var quickPickBoluses = QuickPickBolusesManager.shared
     @FocusState private var insulinFieldIsFocused: Bool
 
     // Add state for recommended bolus and warning
@@ -72,6 +73,30 @@ struct LoopAPNSBolusView: View {
                         }
                     }
 
+                    if !quickPickBoluses.quickPickBoluses.isEmpty {
+                        Section(header: QuickPickSectionHeader(title: "Quick-Pick Boluses", infoText: QuickPickSectionHeader.bolusInfoText)) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(quickPickBoluses.quickPickBoluses) { bolus in
+                                        Button {
+                                            insulinAmount = HKQuantity(unit: .internationalUnit(), doubleValue: bolus.units)
+                                        } label: {
+                                            Text("\(InsulinFormatter.shared.string(bolus.units))U")
+                                                .font(.subheadline.weight(.medium))
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 8)
+                                                .background(Color.accentColor.opacity(0.15))
+                                                .foregroundColor(.accentColor)
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+
                     Section {
                         HKQuantityInputView(
                             label: "Insulin Amount",
@@ -107,22 +132,6 @@ struct LoopAPNSBolusView: View {
                                 }
                             }
                         }
-                    }
-
-                    Section {
-                        Button(action: sendInsulin) {
-                            if isLoading {
-                                HStack {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("Sending...")
-                                }
-                            } else {
-                                Text("Send Insulin")
-                            }
-                        }
-                        .disabled(insulinAmount.doubleValue(for: .internationalUnit()) <= 0 || isLoading || isTOTPBlocked)
-                        .frame(maxWidth: .infinity)
                     }
 
                     // TOTP Blocking Warning Section
@@ -168,6 +177,27 @@ struct LoopAPNSBolusView: View {
                         }
                     }
                 }
+                .safeAreaInset(edge: .bottom) {
+                    Button(action: sendInsulin) {
+                        if isLoading {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Sending...")
+                            }
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Send Insulin")
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(insulinAmount.doubleValue(for: .internationalUnit()) <= 0 || isLoading || isTOTPBlocked)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(.bar)
+                }
                 .navigationTitle("Insulin")
                 .navigationBarTitleDisplayMode(.inline)
             }
@@ -180,6 +210,10 @@ struct LoopAPNSBolusView: View {
                     alertType = .error
                     showAlert = true
                 }
+
+                let step = Storage.shared.bolusIncrement.value.doubleValue(for: .internationalUnit())
+                let maxBolus = Storage.shared.maxBolus.value.doubleValue(for: .internationalUnit())
+                quickPickBoluses.refresh(stepIncrement: max(0.001, step), maxBolus: maxBolus)
 
                 loadRecommendedBolus()
                 // Reset timer state so it shows '-' until first tick
@@ -369,6 +403,10 @@ struct LoopAPNSBolusView: View {
             DispatchQueue.main.async {
                 self.isLoading = false
                 if success {
+                    let sentUnits = insulinAmount.doubleValue(for: .internationalUnit())
+                    if sentUnits > 0 {
+                        QuickPickBolusesManager.shared.recordBolus(units: sentUnits)
+                    }
                     // Mark TOTP code as used
                     TOTPService.shared.markTOTPAsUsed(qrCodeURL: Storage.shared.loopAPNSQrCodeURL.value)
                     self.alertMessage = "Insulin sent successfully!"

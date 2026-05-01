@@ -35,10 +35,7 @@ struct LoopFollowApp: App {
         }
     }
 
-    /// Foreground entry point for the telemetry feature. See Helpers/Telemetry.swift.
-    /// On first foreground after install (or after an update from a pre-telemetry
-    /// version) presents the one-time consent sheet. Otherwise hands off to
-    /// TelemetryClient.maybeSend(), which is internally rate-limited.
+    /// Presents the one-time consent sheet on first foreground.
     private func handleTelemetryForeground() {
         if !telemetryConsentDecisionMade.value {
             // Don't reopen if the sheet is already up (e.g. user backgrounded
@@ -46,8 +43,6 @@ struct LoopFollowApp: App {
             if !showTelemetryConsent {
                 showTelemetryConsent = true
             }
-            return
         }
-        Task.detached { await TelemetryClient.shared.maybeSend() }
     }
 }

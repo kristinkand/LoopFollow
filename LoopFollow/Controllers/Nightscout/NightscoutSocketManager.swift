@@ -63,6 +63,8 @@ class NightscoutSocketManager {
     }
 
     func disconnect() {
+        let wasAuthenticated = connectionState == .authenticated
+
         socket?.removeAllHandlers()
         socket?.disconnect()
         manager?.disconnect()
@@ -71,6 +73,23 @@ class NightscoutSocketManager {
         connectionState = .disconnected
         currentURL = ""
         currentToken = ""
+
+        // While WS was delivering, each Nightscout poll was rescheduled with a multiplier on
+        // the assumption WS would publish before the next REST tick. With WS gone, those
+        // long delays would leave the user on stale data for ~10–15 minutes. Fire each poll
+        // now; their actions will reschedule on the normal (un-multiplied) cadence going
+        // forward, since connectionState is no longer .authenticated.
+        //
+        // Only catch up if we were actually authenticated — skip the no-op disconnect paths
+        // (already-disconnected, never-connected) and the connectIfNeeded() reconnect dance,
+        // where polls were already on a sensible schedule.
+        if wasAuthenticated {
+            let now = Date()
+            TaskScheduler.shared.rescheduleTask(id: .fetchBG, to: now)
+            TaskScheduler.shared.rescheduleTask(id: .deviceStatus, to: now)
+            TaskScheduler.shared.rescheduleTask(id: .treatments, to: now)
+            TaskScheduler.shared.rescheduleTask(id: .profile, to: now)
+        }
     }
 
     // MARK: - Private

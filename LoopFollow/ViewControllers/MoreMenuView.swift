@@ -6,7 +6,6 @@ import UIKit
 
 struct MoreMenuView: View {
     @State private var pendingRoute: MenuRoute?
-    @State private var showSettings = false
     @State private var latestVersion: String?
     @State private var versionTint: Color = .secondary
     @State private var alertTitle = ""
@@ -18,7 +17,7 @@ struct MoreMenuView: View {
         List {
             // Settings
             Section {
-                FullRowButton(showsChevron: true) { showSettings = true } label: {
+                NavigationLink(value: SettingsRoute.settings) {
                     Label("Settings", systemImage: "gearshape")
                 }
             }
@@ -109,9 +108,7 @@ struct MoreMenuView: View {
         } message: {
             Text(alertMessage)
         }
-        .navigationDestination(isPresented: $showSettings) {
-            SettingsRoute.settings.destination
-        }
+        .navigationDestination(for: SettingsRoute.self) { $0.destination }
         .navigationDestination(
             isPresented: Binding(
                 get: { pendingRoute != nil },
@@ -122,7 +119,6 @@ struct MoreMenuView: View {
                 route.destination
             }
         }
-        .navigationDestination(for: SettingsRoute.self) { $0.destination }
     }
 
     // MARK: - Helpers

@@ -26,13 +26,11 @@ struct MoreMenuView: View {
                 let tabs = Storage.shared.orderedTabBarItems()
                 ForEach(TabItem.featureOrder) { item in
                     if let tabIndex = tabs.firstIndex(of: item) {
-                        Button {
+                        FullRowButton {
                             Observable.shared.selectedTabIndex.value = tabIndex
                         } label: {
                             Label(item.displayName, systemImage: item.icon)
                         }
-                        .buttonStyle(.plain)
-                        .contentShape(Rectangle())
                     } else {
                         NavigationLink(value: MenuRoute(item)) {
                             Label(item.displayName, systemImage: item.icon)
@@ -47,11 +45,9 @@ struct MoreMenuView: View {
                     Label("View Log", systemImage: "doc.text.magnifyingglass")
                 }
 
-                Button { shareLogs() } label: {
+                FullRowButton { shareLogs() } label: {
                     Label("Share Logs", systemImage: "square.and.arrow.up")
                 }
-                .buttonStyle(.plain)
-                .contentShape(Rectangle())
             }
 
             // Support & Community
@@ -203,6 +199,24 @@ struct MoreMenuView: View {
             : newer ? .orange
             : latest == currentVersion ? .green
             : .secondary
+    }
+}
+
+// MARK: – Full-row tappable button
+
+private struct FullRowButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                label()
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

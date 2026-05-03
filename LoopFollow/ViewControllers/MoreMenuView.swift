@@ -5,6 +5,8 @@ import SwiftUI
 import UIKit
 
 struct MoreMenuView: View {
+    @State private var pendingRoute: MenuRoute?
+    @State private var showSettings = false
     @State private var latestVersion: String?
     @State private var versionTint: Color = .secondary
     @State private var alertTitle = ""
@@ -16,32 +18,30 @@ struct MoreMenuView: View {
         List {
             // Settings
             Section {
-                NavigationLink(value: SettingsRoute.settings) {
+                FullRowButton(showsChevron: true) { showSettings = true } label: {
                     Label("Settings", systemImage: "gearshape")
                 }
             }
 
             // Features
             Section("Features") {
-                let tabs = Storage.shared.orderedTabBarItems()
                 ForEach(TabItem.featureOrder) { item in
-                    if let tabIndex = tabs.firstIndex(of: item) {
-                        FullRowButton {
+                    FullRowButton(showsChevron: true) {
+                        let tabs = Storage.shared.orderedTabBarItems()
+                        if let tabIndex = tabs.firstIndex(of: item) {
                             Observable.shared.selectedTabIndex.value = tabIndex
-                        } label: {
-                            Label(item.displayName, systemImage: item.icon)
+                        } else {
+                            pendingRoute = MenuRoute(item)
                         }
-                    } else {
-                        NavigationLink(value: MenuRoute(item)) {
-                            Label(item.displayName, systemImage: item.icon)
-                        }
+                    } label: {
+                        Label(item.displayName, systemImage: item.icon)
                     }
                 }
             }
 
             // Logging
             Section("Logging") {
-                NavigationLink(value: MenuRoute.log) {
+                FullRowButton(showsChevron: true) { pendingRoute = .log } label: {
                     Label("View Log", systemImage: "doc.text.magnifyingglass")
                 }
 
@@ -109,8 +109,20 @@ struct MoreMenuView: View {
         } message: {
             Text(alertMessage)
         }
+        .navigationDestination(isPresented: $showSettings) {
+            SettingsRoute.settings.destination
+        }
+        .navigationDestination(
+            isPresented: Binding(
+                get: { pendingRoute != nil },
+                set: { if !$0 { pendingRoute = nil } }
+            )
+        ) {
+            if let route = pendingRoute {
+                route.destination
+            }
+        }
         .navigationDestination(for: SettingsRoute.self) { $0.destination }
-        .navigationDestination(for: MenuRoute.self) { $0.destination }
     }
 
     // MARK: - Helpers
@@ -205,6 +217,7 @@ struct MoreMenuView: View {
 // MARK: – Full-row tappable button
 
 private struct FullRowButton<Label: View>: View {
+    var showsChevron: Bool = false
     let action: () -> Void
     @ViewBuilder let label: () -> Label
 
@@ -213,6 +226,11 @@ private struct FullRowButton<Label: View>: View {
             HStack {
                 label()
                 Spacer(minLength: 0)
+                if showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
             }
             .contentShape(Rectangle())
         }
@@ -232,7 +250,7 @@ enum MenuRoute: Hashable {
     case stats
     case log
 
-    init?(_ item: TabItem) {
+    init(_ item: TabItem) {
         switch item {
         case .home: self = .home
         case .alarms: self = .alarms

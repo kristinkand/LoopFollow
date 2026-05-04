@@ -205,6 +205,10 @@ class MainViewController: UIViewController, ChartViewDelegate, UNUserNotificatio
         // when runMigrationsIfNeeded() is called. This catches migrations deferred by a
         // background BGAppRefreshTask launch in Before-First-Unlock state.
         notificationCenter.addObserver(self, selector: #selector(appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Posted by AppDelegate after Storage.reloadAll has refreshed every StorageValue
+        // following a BFU launch. If we're alive when this fires, our scheduled tasks
+        // were set up with BFU defaults (url='') and need to be redone.
+        notificationCenter.addObserver(self, selector: #selector(handleBFUReloadCompleted), name: .bfuReloadCompleted, object: nil)
 
         #if !targetEnvironment(macCatalyst)
             notificationCenter.addObserver(self, selector: #selector(navigateOnLAForeground), name: .liveActivityDidForeground, object: nil)
@@ -681,28 +685,21 @@ class MainViewController: UIViewController, ChartViewDelegate, UNUserNotificatio
         runMigrationsIfNeeded()
     }
 
+    @objc func handleBFUReloadCompleted() {
+        // Show the loading overlay so the user sees feedback during the 2-5s
+        // while tasks re-run with the now-correct credentials. Tasks scheduled
+        // before reload used url='' and rescheduled themselves 60s out — reset
+        // them so they run within their normal 2-5s initial delay.
+        loadingStates = ["bg": false, "profile": false, "deviceStatus": false]
+        isInitialLoad = true
+        setupLoadingState()
+        showLoadingOverlay()
+        scheduleAllTasks()
+    }
+
     @objc func appCameToForeground() {
-        // If the app was cold-launched in Before-First-Unlock state (e.g. by BGAppRefreshTask
-        // after a reboot), all StorageValues were cached from encrypted UserDefaults and hold
-        // their defaults. Reload everything from disk now that the device is unlocked, firing
-        // Combine observers only for values that actually changed.
-        LogManager.shared.log(category: .general, message: "appCameToForeground: needsBFUReload=\(Storage.shared.needsBFUReload), url='\(LogRedactor.url(Storage.shared.url.value))'")
-        if Storage.shared.needsBFUReload {
-            Storage.shared.needsBFUReload = false
-            LogManager.shared.log(category: .general, message: "BFU reload triggered — reloading all StorageValues")
-            Storage.shared.reloadAll()
-            LogManager.shared.log(category: .general, message: "BFU reload complete: url='\(LogRedactor.url(Storage.shared.url.value))'")
-            // Show the loading overlay so the user sees feedback during the 2-5s
-            // while tasks re-run with the now-correct credentials.
-            loadingStates = ["bg": false, "profile": false, "deviceStatus": false]
-            isInitialLoad = true
-            setupLoadingState()
-            showLoadingOverlay()
-            // Tasks were scheduled during BFU viewDidLoad with url="" — they fired, found no
-            // data source, and rescheduled themselves 60s out. Reset them now so they run
-            // within their normal 2-5s initial delay using the now-correct credentials.
-            scheduleAllTasks()
-        }
+        // BFU recovery (Storage.reloadAll) is driven by AppDelegate; this controller
+        // reacts via .bfuReloadCompleted in handleBFUReloadCompleted() above.
 
         // reset screenlock state if needed
         UIApplication.shared.isIdleTimerDisabled = Storage.shared.screenlockSwitchState.value

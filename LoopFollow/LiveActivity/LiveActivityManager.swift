@@ -174,6 +174,17 @@ final class LiveActivityManager {
         Storage.shared.laRenewalFailed.value = false
         cancelRenewalFailedNotification()
         dismissedByUser = false
+        // A fresh LA invalidates any latched foreground-restart intent — the
+        // condition that prompted the latch (overlay showing / renewal failed)
+        // is resolved by adoption itself, so a deferred restart on the next
+        // didBecomeActive would needlessly tear down the just-adopted LA.
+        if pendingForegroundRestart {
+            LogManager.shared.log(
+                category: .general,
+                message: "[LA] adoption clears stale pendingForegroundRestart (LA already replaced via push-to-start)"
+            )
+            pendingForegroundRestart = false
+        }
         bind(to: activity, logReason: "push-to-start-adopt")
     }
 
@@ -247,10 +258,10 @@ final class LiveActivityManager {
         let renewBy = Storage.shared.laRenewBy.value
         let now = Date().timeIntervalSince1970
         let overlayIsShowing = renewBy > 0 && now >= renewBy - LiveActivityManager.renewalWarning
-        let appState = UIApplication.shared.applicationState.rawValue
-        let existing = Activity<GlucoseLiveActivityAttributes>.activities.count
         let stuckSends = pushToStartSendsWithoutAdoption
         let pushToStartLooksStuck = stuckSends >= LiveActivityManager.pushToStartForceRestartThreshold
+        let appState = UIApplication.shared.applicationState.rawValue
+        let existing = Activity<GlucoseLiveActivityAttributes>.activities.count
 
         LogManager.shared.log(
             category: .general,
@@ -286,10 +297,30 @@ final class LiveActivityManager {
     }
 
     private func performForegroundRestart() {
+        // Re-check the conditions that latched the intent. The latch can outlive its
+        // trigger — e.g. if the user briefly foregrounds the app while the renewal
+        // overlay is up, then backgrounds before didBecomeActive runs, the background
+        // renewal can replace the LA before the next foreground entry. By the time
+        // didBecomeActive eventually fires, the freshly-renewed LA is healthy and a
+        // restart would be gratuitous.
+        let renewalFailed = Storage.shared.laRenewalFailed.value
+        let renewBy = Storage.shared.laRenewBy.value
+        let now = Date().timeIntervalSince1970
+        let overlayIsShowing = renewBy > 0 && now >= renewBy - LiveActivityManager.renewalWarning
+        let pushToStartLooksStuck = pushToStartSendsWithoutAdoption >= LiveActivityManager.pushToStartForceRestartThreshold
+        guard renewalFailed || overlayIsShowing || pushToStartLooksStuck else {
+            LogManager.shared.log(
+                category: .general,
+                message: "[LA] deferred foreground restart skipped — conditions no longer hold (renewalFailed=\(renewalFailed), overlayShowing=\(overlayIsShowing), pushToStartLooksStuck=\(pushToStartLooksStuck))"
+            )
+            return
+        }
+
         // Mark restart intent BEFORE clearing storage flags, so any late .dismissed
         // from the old activity is never misclassified as a user swipe.
         endingForRestart = true
         dismissedByUser = false
+        nextStartReasonOverride = "deferred-foreground-restart"
 
         // Stop any observers/tasks tied to the previous activity instance. In the
         // current=nil branch below, the old observer can otherwise deliver a late
@@ -453,6 +484,12 @@ final class LiveActivityManager {
     /// new `pushToStartToken` when the current one has gone silent
     /// (Apple FB21158660).
     private var pushToStartSendsWithoutAdoption: Int = 0
+    /// Single-shot override for the next push-to-start reason tag. Consumed by
+    /// `startIfNeeded`. Lets the deferred-foreground-restart path tag its
+    /// push-to-start with a distinct label instead of "user-start", which made
+    /// the 8:25 stale-latch event indistinguishable from a real user start in
+    /// the log.
+    private var nextStartReasonOverride: String?
 
     // MARK: - Public API
 
@@ -469,6 +506,9 @@ final class LiveActivityManager {
             LogManager.shared.log(category: .general, message: "Live Activity not authorized")
             return
         }
+
+        let startReason = nextStartReasonOverride ?? "user-start"
+        nextStartReasonOverride = nil
 
         if #available(iOS 17.2, *) {
             // iOS 17.2+ uses push-to-start for every creation path. If an
@@ -490,10 +530,10 @@ final class LiveActivityManager {
                     category: .general,
                     message: "[LA] existing activity is stale on startIfNeeded (iOS 17.2+) — push-to-start replace (staleDatePassed=\(staleDatePassed), inRenewalWindow=\(inRenewalWindow))"
                 )
-                attemptPushToStartCreate(reason: "user-start", oldActivity: existing)
+                attemptPushToStartCreate(reason: startReason, oldActivity: existing)
                 return
             }
-            attemptPushToStartCreate(reason: "user-start", oldActivity: nil)
+            attemptPushToStartCreate(reason: startReason, oldActivity: nil)
         } else {
             startIfNeededLegacy()
         }

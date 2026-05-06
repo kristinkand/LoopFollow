@@ -37,6 +37,13 @@ class RemoteSettingsViewModel: ObservableObject {
     @Published var shouldPromptForURL: Bool = false
     @Published var shouldPromptForToken: Bool = false
 
+    // MARK: - Diagnostics
+
+    @Published var diagnostics = RemoteDiagnostics()
+    private let diagnosticsHistoryDays = 14
+    private let diagnosticsHistoryCap = 1000
+    private let futureStartDateTolerance: TimeInterval = 60
+
     let loopFollowTeamId: String = BuildDetails.default.teamID ?? "Unknown"
 
     /// Determines if the target app's Team ID is different from this app's build Team ID.
@@ -232,5 +239,86 @@ class RemoteSettingsViewModel: ObservableObject {
         // Update device-related properties
         isTrioDevice = (storage.device.value == "Trio")
         isLoopDevice = (storage.device.value == "Loop")
+    }
+
+    // MARK: - Diagnostics
+
+    func runDiagnostics() {
+        diagnostics = RemoteDiagnostics(status: .running)
+
+        guard !storage.url.value.isEmpty else {
+            diagnostics = RemoteDiagnostics(status: .ok)
+            return
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let since = Date().addingTimeInterval(-Double(diagnosticsHistoryDays) * 86400)
+        let parameters: [String: String] = [
+            "count": "\(diagnosticsHistoryCap)",
+            "find[startDate][$gte]": formatter.string(from: since),
+        ]
+        NightscoutUtils.executeRequest(
+            eventType: .profile,
+            parameters: parameters
+        ) { [weak self] (result: Result<[NSProfile], Error>) in
+            guard let self = self else { return }
+            switch result {
+            case let .success(history):
+                let evaluated = self.evaluateDiagnostics(history: history)
+                DispatchQueue.main.async {
+                    self.diagnostics = evaluated
+                    LogManager.shared.log(
+                        category: .nightscout,
+                        message: "Remote diagnostics evaluated: records=\(history.count) bundleMismatch=\(evaluated.bundleMismatch != nil) bouncingTokens=\(evaluated.bouncingTokens != nil) futureStartDate=\(evaluated.futureStartDate != nil)"
+                    )
+                }
+            case let .failure(error):
+                DispatchQueue.main.async {
+                    self.diagnostics = RemoteDiagnostics(status: .failed(error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    private func evaluateDiagnostics(history: [NSProfile]) -> RemoteDiagnostics {
+        var result = RemoteDiagnostics(status: .ok)
+        let device = storage.device.value
+
+        if let current = history.first, !device.isEmpty {
+            let topLevel = current.bundleIdentifier?.trimmingCharacters(in: .whitespaces) ?? ""
+            let nested = current.loopSettings?.bundleIdentifier?.trimmingCharacters(in: .whitespaces) ?? ""
+
+            if device == "Loop", nested.isEmpty, !topLevel.isEmpty {
+                result.bundleMismatch = .init(expectedDevice: "Loop", observedBundleId: topLevel)
+            } else if device == "Trio", topLevel.isEmpty, !nested.isEmpty {
+                result.bundleMismatch = .init(expectedDevice: "Trio", observedBundleId: nested)
+            }
+        }
+
+        let chronological = history.sorted { lhs, rhs in
+            let l = lhs.startDate.flatMap(NightscoutUtils.parseDate) ?? .distantPast
+            let r = rhs.startDate.flatMap(NightscoutUtils.parseDate) ?? .distantPast
+            return l < r
+        }
+        var compressed: [String] = []
+        for record in chronological {
+            guard let token = record.deviceToken ?? record.loopSettings?.deviceToken,
+                  !token.isEmpty else { continue }
+            if compressed.last != token {
+                compressed.append(token)
+            }
+        }
+        let distinctTokens = Set(compressed)
+        if compressed.count > distinctTokens.count {
+            result.bouncingTokens = .init(distinctCount: distinctTokens.count, recordsScanned: history.count)
+        }
+
+        let dates = history.compactMap { $0.startDate.flatMap(NightscoutUtils.parseDate) }
+        if let maxDate = dates.max(), maxDate > Date().addingTimeInterval(futureStartDateTolerance) {
+            result.futureStartDate = .init(startDate: maxDate)
+        }
+
+        return result
     }
 }

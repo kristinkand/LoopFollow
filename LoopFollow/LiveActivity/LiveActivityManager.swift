@@ -1128,7 +1128,13 @@ final class LiveActivityManager {
             LogManager.shared.log(category: .general, message: "[LA] refresh: LA update skipped — areActivitiesEnabled=false reason=\(reason)")
             return
         }
-        if current == nil, let existing = Activity<GlucoseLiveActivityAttributes>.activities.first {
+        if current == nil,
+           let existing = Activity<GlucoseLiveActivityAttributes>.activities.first(where: { $0.activityState == .active })
+        {
+            // Skip activities already in .ended/.dismissed — those are corpses
+            // (typically post-410 ends pending iOS dismissal). Binding to them
+            // would clear endingForRestart and turn the eventual iOS dismissal
+            // into a misclassified user swipe.
             bind(to: existing, logReason: "bind-existing")
         }
         if let _ = current {
@@ -1153,7 +1159,9 @@ final class LiveActivityManager {
     }
 
     func update(snapshot: GlucoseSnapshot, reason: String) {
-        if current == nil, let existing = Activity<GlucoseLiveActivityAttributes>.activities.first {
+        if current == nil,
+           let existing = Activity<GlucoseLiveActivityAttributes>.activities.first(where: { $0.activityState == .active })
+        {
             bind(to: existing, logReason: "bind-existing")
         }
 
@@ -1284,10 +1292,20 @@ final class LiveActivityManager {
         )
         // Mark as system-initiated so the `.dismissed` delivered by end()
         // is not classified as a user swipe — that would set dismissedByUser=true
-        // and block the auto-restart promised by the comment below.
+        // and block the restart kicked off below.
         endingForRestart = true
         end()
-        // Activity will restart on next BG refresh via refreshFromCurrentState()
+
+        // Waiting for the next BG refresh is unreliable: end() nulls `current`
+        // and clears laRenewBy, so renewIfNeeded short-circuits and performRefresh's
+        // bind-existing path rebinds to the just-ended activity — clearing
+        // endingForRestart and turning the eventual iOS dismissal into a misclassified
+        // user swipe. Drive the restart synchronously instead.
+        if #available(iOS 17.2, *) {
+            Task { @MainActor [weak self] in
+                self?.attemptPushToStartCreate(reason: "expired-token", oldActivity: nil)
+            }
+        }
     }
 
     // MARK: - Renewal Notifications
@@ -1353,7 +1371,13 @@ final class LiveActivityManager {
             for await state in activity.activityStateUpdates {
                 LogManager.shared.log(category: .general, message: "Live Activity state id=\(activity.id) -> \(state)", isDebug: true)
                 if state == .ended || state == .dismissed {
-                    if current?.id == activity.id {
+                    // Capture whether this delivery is for the activity we currently track
+                    // BEFORE clearing `current` below. The classifier needs this signal to
+                    // distinguish a real user swipe of the foreground LA from a late
+                    // .dismissed delivered by a stale observer for an activity we already
+                    // ended programmatically.
+                    let wasCurrentActivity = current?.id == activity.id
+                    if wasCurrentActivity {
                         current = nil
                         // Do NOT clear laRenewBy here. Preserving it means handleForeground()
                         // can detect the renewal window on the next foreground event and restart
@@ -1383,17 +1407,27 @@ final class LiveActivityManager {
                         //     auto-restart until forceRestart() is called. Clear laRenewBy so
                         //     handleForeground() does NOT re-enter the renewal path on the next
                         //     foreground — the renewal intent is cancelled by the user's choice.
+                        //
+                        // Gated on `wasCurrentActivity`: the user can only swipe the
+                        // foreground LA. A .dismissed for an activity we no longer track is a
+                        // stale observer (the activity was ended programmatically and iOS is
+                        // just now cleaning up) — must not latch dismissedByUser=true.
                         let now = Date().timeIntervalSince1970
                         let renewBy = Storage.shared.laRenewBy.value
                         let renewalFailed = Storage.shared.laRenewalFailed.value
                         let pastDeadline = renewBy > 0 && now >= renewBy
-                        LogManager.shared.log(category: .general, message: "[LA] .dismissed: endingForRestart=\(endingForRestart), renewalFailed=\(renewalFailed), pastDeadline=\(pastDeadline), renewBy=\(renewBy), now=\(now)")
+                        LogManager.shared.log(category: .general, message: "[LA] .dismissed: endingForRestart=\(endingForRestart), renewalFailed=\(renewalFailed), pastDeadline=\(pastDeadline), wasCurrent=\(wasCurrentActivity), renewBy=\(renewBy), now=\(now)")
                         if endingForRestart {
                             // (a) Our own restart — do nothing, Task handles the rest.
                             LogManager.shared.log(category: .general, message: "[LA] dismissed by self (endingForRestart) — restart in-flight, no action")
                         } else if renewalFailed || pastDeadline {
                             // (b) iOS system force-dismiss — allow auto-restart on next foreground.
                             LogManager.shared.log(category: .general, message: "[LA] dismissed by iOS (renewalFailed=\(renewalFailed), pastDeadline=\(pastDeadline)) — auto-restart on next foreground")
+                        } else if !wasCurrentActivity {
+                            // (d) Stale observer for an activity we no longer track (e.g. a
+                            //     post-410 end whose iOS-side dismissal landed hours later).
+                            //     Not a user swipe — no flags to set.
+                            LogManager.shared.log(category: .general, message: "[LA] dismissed by stale observer (id=\(activity.id) is not current) — no action")
                         } else {
                             // (c) User decision — cancel renewal intent, block auto-restart.
                             dismissedByUser = true

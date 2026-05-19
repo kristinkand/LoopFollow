@@ -1389,6 +1389,20 @@ final class LiveActivityManager {
                         //   • the user disables LA or calls forceRestart
                         LogManager.shared.log(category: .general, message: "[LA] activity cleared id=\(activity.id) state=\(state)", isDebug: true)
                     }
+                    if state == .ended, wasCurrentActivity, !endingForRestart {
+                        // iOS terminated the activity itself — typically the ~8h lifetime
+                        // cap reached before renewal fired. The .dismissed path below
+                        // already handles iOS-initiated dismissals via renewalFailed /
+                        // pastDeadline, but .ended bypasses that branch entirely. Without
+                        // a signal here, handleForeground() sees `renewalFailed=false` and
+                        // `renewBy` still in the future, returns "no action needed", and
+                        // startIfNeeded keeps re-binding the corpse — the LA stays dark
+                        // until the user manually force-restarts. Mark renewalFailed so
+                        // the next foreground entry runs performForegroundRestart, which
+                        // sweeps any leftover ended activity and pushes a fresh one.
+                        Storage.shared.laRenewalFailed.value = true
+                        LogManager.shared.log(category: .general, message: "[LA] ended by iOS (not our restart) — marked renewalFailed=true, auto-restart on next foreground")
+                    }
                     if state == .dismissed {
                         // Three possible sources of .dismissed — only the third blocks restart:
                         //

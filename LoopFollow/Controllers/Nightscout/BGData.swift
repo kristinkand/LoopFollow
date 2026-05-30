@@ -5,11 +5,19 @@ import Foundation
 import UIKit
 
 extension MainViewController {
+    /// Number of days of BG history to request from the source. One extra day is
+    /// added when the "Show Yesterday's BG" overlay is enabled (Nightscout only),
+    /// so the overlay can display the same clock time from the day before.
+    var bgFetchDays: Int {
+        let extraDay = (Storage.shared.showYesterdayLine.value && IsNightscoutEnabled()) ? 1 : 0
+        return Storage.shared.downloadDays.value + extraDay
+    }
+
     // Dex Share Web Call
     func webLoadDexShare() {
         // Dexcom Share only returns 24 hrs of data as of now
         // Requesting more just for consistency with NS
-        let graphHours = 24 * Storage.shared.downloadDays.value
+        let graphHours = 24 * bgFetchDays
         let count = graphHours * 12
         dexShare?.fetchData(count) { err, result in
             if let error = err {
@@ -33,13 +41,26 @@ extension MainViewController {
                 return
             }
 
+            // Dexcom Share can return duplicate readings when multiple uploaders
+            // write to the same Dexcom account. Dedup before any further use.
+            var dedupedData: [ShareGlucoseData] = []
+            var lastDexTime = Double.infinity
+            var lastDexSGV: Int?
+            for reading in data {
+                if lastDexSGV == nil || lastDexSGV != reading.sgv || (lastDexTime - reading.date >= 30) {
+                    dedupedData.append(reading)
+                    lastDexTime = reading.date
+                    lastDexSGV = reading.sgv
+                }
+            }
+
             // Supplement with NS if Dex data doesn't cover the full requested window.
             let dexCutoff = dateTimeUtils.getNowTimeIntervalUTC() - Double(graphHours) * 3600
-            let dexCoversFull = data.last.map { $0.date <= dexCutoff } ?? false
+            let dexCoversFull = dedupedData.last.map { $0.date <= dexCutoff } ?? false
             if !dexCoversFull, IsNightscoutEnabled() {
-                self.webLoadNSBGData(dexData: data)
+                self.webLoadNSBGData(dexData: dedupedData)
             } else {
-                self.ProcessDexBGData(data: self.deduplicateBGReadings(data), sourceName: "Dexcom")
+                self.ProcessDexBGData(data: dedupedData, sourceName: "Dexcom")
             }
         }
     }
@@ -53,8 +74,8 @@ extension MainViewController {
         }
 
         var parameters: [String: String] = [:]
-        let date = Calendar.current.date(byAdding: .day, value: -1 * Storage.shared.downloadDays.value, to: Date())!
-        parameters["count"] = "\(Storage.shared.downloadDays.value * 4 * 24 * 60 / 5)"
+        let date = Calendar.current.date(byAdding: .day, value: -1 * bgFetchDays, to: Date())!
+        parameters["count"] = "\(bgFetchDays * 4 * 24 * 60 / 5)"
         parameters["find[date][$gte]"] = "\(Int(date.timeIntervalSince1970 * 1000))"
 
         // Exclude 'cal' entries
@@ -217,6 +238,27 @@ extension MainViewController {
         LogManager.shared.log(category: .nightscout,
                               message: "Graph data updated with \(bgData.count) entries.",
                               isDebug: true)
+
+        // Build the optional "yesterday" comparison overlay. Every fetched reading is
+        // shifted +24h so it lines up with the same clock time today; the extra day of
+        // history pulled by bgFetchDays provides the portion that falls inside the
+        // visible window. The overlay is capped to "now + hours of prediction" so it
+        // never extends further into the future than the prediction line.
+        yesterdayBGData.removeAll()
+        if Storage.shared.showYesterdayLine.value, IsNightscoutEnabled() {
+            let cutoff = dateTimeUtils.getTimeIntervalNHoursAgo(N: 24 * bgFetchDays)
+            let futureLimit = dateTimeUtils.getNowTimeIntervalUTC() + Storage.shared.predictionToLoad.value * 3600
+            for i in 0 ..< data.count {
+                let reading = data[data.count - 1 - i]
+                guard reading.date >= cutoff, reading.sgv <= 600 else { continue }
+                let shiftedDate = reading.date + 24 * 60 * 60
+                guard shiftedDate <= futureLimit else { continue }
+                yesterdayBGData.append(ShareGlucoseData(sgv: reading.sgv,
+                                                        date: shiftedDate,
+                                                        direction: reading.direction))
+            }
+        }
+
         viewUpdateNSBG(sourceName: sourceName)
     }
 

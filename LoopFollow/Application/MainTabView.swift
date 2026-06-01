@@ -37,6 +37,14 @@ struct MainTabView: View {
             .tag(4)
         }
         .preferredColorScheme(appearanceMode.value.colorScheme)
+        .onAppear {
+            // Start the data pipeline as soon as the UI appears, independent of
+            // tab layout. Without this, a user who moves Home into the Menu would
+            // have no MainViewController — and therefore no data fetching, alarms,
+            // or background audio — until they manually opened Home. Tying it to
+            // onAppear (not app launch) keeps it off the BG-only refresh path.
+            MainViewController.bootstrap()
+        }
     }
 
     @ViewBuilder

@@ -41,9 +41,6 @@ struct NightscoutSettingsView: View {
                 dismiss()
             }
         }
-        .onDisappear {
-            viewModel.dismiss()
-        }
         .navigationBarTitle("Nightscout Settings", displayMode: .inline)
         .navigationBarBackButtonHidden(usesModalCloseButton)
         .preferredColorScheme(Storage.shared.appearanceMode.value.colorScheme)

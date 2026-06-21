@@ -173,24 +173,36 @@ final class CustomSoundStore {
     /// Drop entries from the index that point to files that no longer exist on disk
     /// (e.g. the user deleted them via the Files app).
     private func pruneMissing() {
+        var didChange = false
         for id in Array(index.keys) where fileURL(for: id) == nil {
             index.removeValue(forKey: id)
+            didChange = true
         }
-        saveIndex()
+        if didChange { saveIndex() }
     }
 
     /// Pick up audio files that were dropped into the Documents directory via the
     /// Files app and move them into `CustomSounds/` with a fresh UUID.
+    ///
+    /// Each candidate is validated *in place* against the same size/duration/format
+    /// rules as `importFile(at:)` before being moved. A file that fails any check is
+    /// left untouched in Documents — we never move (and therefore never delete) a file
+    /// the user put there.
     private func absorbDroppedFiles() {
         let documents = directory.deletingLastPathComponent()
-        guard let entries = try? fileManager.contentsOfDirectory(at: documents, includingPropertiesForKeys: nil) else {
+        guard let entries = try? fileManager.contentsOfDirectory(at: documents, includingPropertiesForKeys: [.fileSizeKey]) else {
             return
         }
         let audioExtensions: Set<String> = ["mp3", "wav", "m4a", "aac", "aif", "aiff", "caf"]
+        var didChange = false
         for entry in entries {
             var isDir: ObjCBool = false
             guard fileManager.fileExists(atPath: entry.path, isDirectory: &isDir), !isDir.boolValue else { continue }
             guard audioExtensions.contains(entry.pathExtension.lowercased()) else { continue }
+
+            let size = (try? entry.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard size <= Self.maxFileBytes, validateAudio(at: entry) else { continue }
+            if let duration = audioDuration(at: entry), duration > Self.maxDurationSeconds { continue }
 
             let newID = UUID()
             let dest = directory.appendingPathComponent("\(newID.uuidString).\(entry.pathExtension)")
@@ -199,14 +211,11 @@ final class CustomSoundStore {
             } catch {
                 continue
             }
-            if !validateAudio(at: dest) {
-                try? fileManager.removeItem(at: dest)
-                continue
-            }
             let baseName = entry.deletingPathExtension().lastPathComponent
             index[newID] = baseName.isEmpty ? "Custom Sound" : baseName
+            didChange = true
         }
-        saveIndex()
+        if didChange { saveIndex() }
     }
 
     private func validateAudio(at url: URL) -> Bool {

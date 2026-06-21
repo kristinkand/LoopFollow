@@ -202,9 +202,14 @@ private struct TonePickerSheet: View {
     }
 
     private func deleteCustomSounds(at offsets: IndexSet) {
-        for index in offsets {
-            let sound = customSounds[index]
+        let deleted = offsets.map { customSounds[$0] }
+        for sound in deleted {
             CustomSoundStore.shared.delete(sound.id)
+        }
+        // If the alarm was pointing at a sound we just deleted, fall back to a valid
+        // built-in so the picker and the alarm don't keep a dangling reference.
+        if deleted.contains(where: { SoundFile.custom($0.id) == selected }) {
+            selected = .fallback
         }
         reloadCustomSounds()
     }

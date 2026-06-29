@@ -43,16 +43,7 @@ extension MainViewController {
 
             // Dexcom Share can return duplicate readings when multiple uploaders
             // write to the same Dexcom account. Dedup before any further use.
-            var dedupedData: [ShareGlucoseData] = []
-            var lastDexTime = Double.infinity
-            var lastDexSGV: Int?
-            for reading in data {
-                if lastDexSGV == nil || lastDexSGV != reading.sgv || (lastDexTime - reading.date >= 30) {
-                    dedupedData.append(reading)
-                    lastDexTime = reading.date
-                    lastDexSGV = reading.sgv
-                }
-            }
+            let dedupedData = self.deduplicateBGReadings(data)
 
             // Supplement with NS if Dex data doesn't cover the full requested window.
             let dexCutoff = dateTimeUtils.getNowTimeIntervalUTC() - Double(graphHours) * 3600
@@ -75,7 +66,7 @@ extension MainViewController {
 
         var parameters: [String: String] = [:]
         let date = Calendar.current.date(byAdding: .day, value: -1 * bgFetchDays, to: Date())!
-        parameters["count"] = "\(bgFetchDays * 4 * 24 * 60 / 5)"
+        parameters["count"] = "\(bgFetchDays * globalVariables.maxExpectedUploaders * 24 * 60 / 5)"
         parameters["find[date][$gte]"] = "\(Int(date.timeIntervalSince1970 * 1000))"
 
         // Exclude 'cal' entries

@@ -22,6 +22,7 @@ struct NightscoutSettingsView: View {
             urlSection
             tokenSection
             statusSection
+            webSocketSection
 
             if viewModel.isFreshSetup {
                 continueSection

@@ -146,7 +146,8 @@ struct MoreMenuView: View {
                 UIApplication.shared.topMost?.dismiss(animated: true)
             },
             onShare: { noticeText in
-                UIApplication.shared.topMost?.dismiss(animated: true) {
+                let presenter = UIApplication.shared.topMost
+                presenter?.dismiss(animated: true) {
                     presentLogShareSheet(noticeText: noticeText, logFiles: files)
                 }
             }

@@ -28,6 +28,14 @@ struct RemoteDiagnostics {
     struct BouncingTokens: Equatable {
         let distinctCount: Int
         let recordsScanned: Int
+        let shifts: [TokenShift]
+    }
+
+    struct TokenShift: Equatable {
+        let when: Date
+        let fromToken: String
+        let toToken: String
+        let bundleIdentifier: String?
     }
 
     struct FutureStartDate: Equatable {

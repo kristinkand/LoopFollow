@@ -515,10 +515,7 @@ struct RemoteSettingsView: View {
                 )
             }
             if let bouncing = viewModel.diagnostics.bouncingTokens {
-                diagnosticWarning(
-                    title: "Multiple devices uploading profiles",
-                    detail: "Device tokens are alternating in the last 14 days of profile uploads (\(bouncing.distinctCount) tokens involved across \(bouncing.recordsScanned) records). This usually means more than one app installation is uploading to the same Nightscout. Remove the app from spare or unused phones."
-                )
+                bouncingTokensWarning(bouncing)
             }
             if let future = viewModel.diagnostics.futureStartDate {
                 diagnosticWarning(
@@ -551,5 +548,43 @@ struct RemoteSettingsView: View {
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func bouncingTokensWarning(_ bouncing: RemoteDiagnostics.BouncingTokens) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundColor(.orange)
+                Text("Multiple devices uploading profiles")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.orange)
+            }
+            Text("Device tokens are alternating in recent profile uploads (\(bouncing.distinctCount) tokens involved across \(bouncing.recordsScanned) records). This usually means more than one app installation is uploading to the same Nightscout. Remove the app from spare or unused phones.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            if !bouncing.shifts.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(bouncing.shifts.enumerated()), id: \.offset) { _, shift in
+                        Text("\(shiftTimestampFormatter.string(from: shift.when))  \(abbreviateToken(shift.fromToken)) → \(abbreviateToken(shift.toToken))")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var shiftTimestampFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f
+    }
+
+    private func abbreviateToken(_ token: String) -> String {
+        guard token.count > 16 else { return token }
+        return "\(token.prefix(7))…\(token.suffix(6))"
     }
 }

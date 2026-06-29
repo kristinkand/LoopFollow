@@ -40,7 +40,6 @@ class RemoteSettingsViewModel: ObservableObject {
     // MARK: - Diagnostics
 
     @Published var diagnostics = RemoteDiagnostics()
-    private let diagnosticsHistoryDays = 14
     private let diagnosticsHistoryCap = 1000
     private let futureStartDateTolerance: TimeInterval = 60
 
@@ -251,12 +250,8 @@ class RemoteSettingsViewModel: ObservableObject {
             return
         }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let since = Date().addingTimeInterval(-Double(diagnosticsHistoryDays) * 86400)
         let parameters: [String: String] = [
             "count": "\(diagnosticsHistoryCap)",
-            "find[startDate][$gte]": formatter.string(from: since),
         ]
         NightscoutUtils.executeRequest(
             eventType: .profile,
@@ -297,21 +292,45 @@ class RemoteSettingsViewModel: ObservableObject {
         }
 
         let chronological = history.sorted { lhs, rhs in
-            let l = lhs.startDate.flatMap(NightscoutUtils.parseDate) ?? .distantPast
-            let r = rhs.startDate.flatMap(NightscoutUtils.parseDate) ?? .distantPast
-            return l < r
+            profileTimestamp(lhs) < profileTimestamp(rhs)
         }
-        var compressed: [String] = []
+        struct CompressedEntry {
+            let token: String
+            let when: Date
+            let bundle: String?
+        }
+        var compressed: [CompressedEntry] = []
         for record in chronological {
             guard let token = record.deviceToken ?? record.loopSettings?.deviceToken,
                   !token.isEmpty else { continue }
-            if compressed.last != token {
-                compressed.append(token)
+            if compressed.last?.token != token {
+                compressed.append(
+                    CompressedEntry(
+                        token: token,
+                        when: profileTimestamp(record),
+                        bundle: record.bundleIdentifier ?? record.loopSettings?.bundleIdentifier
+                    )
+                )
             }
         }
-        let distinctTokens = Set(compressed)
+        let distinctTokens = Set(compressed.map { $0.token })
         if compressed.count > distinctTokens.count {
-            result.bouncingTokens = .init(distinctCount: distinctTokens.count, recordsScanned: history.count)
+            var shifts: [RemoteDiagnostics.TokenShift] = []
+            for pair in zip(compressed, compressed.dropFirst()) {
+                shifts.append(
+                    RemoteDiagnostics.TokenShift(
+                        when: pair.1.when,
+                        fromToken: pair.0.token,
+                        toToken: pair.1.token,
+                        bundleIdentifier: pair.1.bundle
+                    )
+                )
+            }
+            result.bouncingTokens = .init(
+                distinctCount: distinctTokens.count,
+                recordsScanned: history.count,
+                shifts: shifts
+            )
         }
 
         let dates = history.compactMap { $0.startDate.flatMap(NightscoutUtils.parseDate) }
@@ -320,5 +339,11 @@ class RemoteSettingsViewModel: ObservableObject {
         }
 
         return result
+    }
+
+    private func profileTimestamp(_ profile: NSProfile) -> Date {
+        if let s = profile.startDate, let d = NightscoutUtils.parseDate(s) { return d }
+        if let s = profile.createdAt, let d = NightscoutUtils.parseDate(s) { return d }
+        return .distantPast
     }
 }

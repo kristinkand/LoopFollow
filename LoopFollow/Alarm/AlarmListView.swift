@@ -22,21 +22,35 @@ struct AlarmListView: View {
     @State private var sheetInfo: SheetInfo?
     @State private var deleteAfterDismiss: UUID?
     @State private var selectedAlarm: Alarm?
+    @State private var searchText = ""
+
+    // MARK: - Search
+
+    private func matches(_ alarm: Alarm) -> Bool {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        return alarm.name.localizedCaseInsensitiveContains(query)
+            || alarm.type.rawValue.localizedCaseInsensitiveContains(query)
+    }
+
+    private var hasResults: Bool {
+        !snoozedAlarms.isEmpty || !activeAlarms.isEmpty || !inactiveAlarms.isEmpty
+    }
 
     // MARK: - Categorized Alarms
 
     private var snoozedAlarms: [Alarm] {
-        store.value.filter { $0.snoozedUntil ?? .distantPast > Date() && $0.isEnabled }
+        store.value.filter { $0.snoozedUntil ?? .distantPast > Date() && $0.isEnabled && matches($0) }
             .sorted(by: Alarm.byPriorityThenSpec)
     }
 
     private var activeAlarms: [Alarm] {
-        store.value.filter { $0.isEnabled && ($0.snoozedUntil ?? .distantPast <= Date()) }
+        store.value.filter { $0.isEnabled && ($0.snoozedUntil ?? .distantPast <= Date()) && matches($0) }
             .sorted(by: Alarm.byPriorityThenSpec)
     }
 
     private var inactiveAlarms: [Alarm] {
-        store.value.filter { !$0.isEnabled }
+        store.value.filter { !$0.isEnabled && matches($0) }
             .sorted(by: Alarm.byPriorityThenSpec)
     }
 
@@ -81,6 +95,23 @@ struct AlarmListView: View {
                 }
             }
         }
+        .overlay {
+            if !hasResults, !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                    Text("No Results")
+                        .font(.headline)
+                    Text("No alarms match “\(searchText)”.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal)
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search alarms")
         .sheet(item: $sheetInfo, onDismiss: handleSheetDismiss) { info in
             sheetContent(for: info)
         }
@@ -154,6 +185,9 @@ struct AlarmListView: View {
             AddAlarmSheet { type in
                 let new = Alarm(type: type)
                 store.value.append(new)
+                // First alarm the user adds is the moment notifications become
+                // useful — request authorization here rather than at app launch.
+                NotificationAuthorization.requestIfNeeded()
                 sheetInfo = .editor(id: new.id, isNew: true)
             }
 

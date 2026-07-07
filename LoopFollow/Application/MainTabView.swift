@@ -14,6 +14,9 @@ struct MainTabView: View {
     @ObservedObject private var statisticsPosition = Storage.shared.statisticsPosition
     @ObservedObject private var treatmentsPosition = Storage.shared.treatmentsPosition
 
+    @State private var showTelemetryConsent = false
+    @State private var showOnboarding = false
+
     private var orderedItems: [TabItem] {
         Storage.shared.orderedTabBarItems()
     }
@@ -44,6 +47,56 @@ struct MainTabView: View {
             // or background audio — until they manually opened Home. Tying it to
             // onAppear (not app launch) keeps it off the BG-only refresh path.
             MainViewController.bootstrap()
+
+            // Show the first-run onboarding once for everyone. Returning users
+            // get a prominent Skip on the welcome screen. The telemetry consent
+            // prompt is deferred until onboarding is dismissed so the two never
+            // appear on top of one another.
+            if !Storage.shared.hasCompletedOnboarding.value {
+                showOnboarding = true
+            } else {
+                runPostOnboardingPrompts()
+            }
+        }
+        .fullScreenCover(isPresented: $showOnboarding, onDismiss: {
+            // Covers both finishing and skipping onboarding — the telemetry and
+            // notification steps live inside the flow, so anyone who skips still
+            // needs these handled here.
+            runPostOnboardingPrompts()
+        }) {
+            OnboardingContainerView(onClose: { showOnboarding = false })
+        }
+        .sheet(isPresented: $showTelemetryConsent, onDismiss: {
+            // Ask for notifications only once telemetry is resolved, so the system
+            // prompt never stacks on top of the consent sheet.
+            requestNotificationsIfAlarmsEnabled()
+        }) {
+            // User must explicitly choose — no swipe-to-dismiss.
+            TelemetryConsentView()
+                .interactiveDismissDisabled(true)
+        }
+    }
+
+    /// Runs after onboarding closes, whether it was completed or skipped. Telemetry
+    /// consent and notification permission both live inside the onboarding flow, so
+    /// a skip would otherwise bypass them. Telemetry consent goes first (as a
+    /// sheet); the notification request follows on its dismissal so the two never
+    /// appear at once. When the user completed the flow these are already decided,
+    /// so both calls are no-ops.
+    private func runPostOnboardingPrompts() {
+        if !Storage.shared.telemetryConsentDecisionMade.value {
+            showTelemetryConsent = true // notifications requested on its dismiss
+        } else {
+            requestNotificationsIfAlarmsEnabled()
+        }
+    }
+
+    /// Deferred-permission policy: only ask for notifications once there's an
+    /// enabled alarm that needs them. Safe to call repeatedly — it's a no-op once
+    /// the status is determined.
+    private func requestNotificationsIfAlarmsEnabled() {
+        if Storage.shared.alarms.value.contains(where: { $0.isEnabled }) {
+            NotificationAuthorization.requestIfNeeded()
         }
     }
 

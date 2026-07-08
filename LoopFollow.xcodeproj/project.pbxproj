@@ -998,61 +998,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		37989DB62F609B0C0004BD8B /* LoopFollowWatch Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = "LoopFollowWatch Watch App";
-			sourceTree = "<group>";
-		};
-		37A4BDDE2F5B6B4A00EEB289 /* LoopFollowLAExtension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = LoopFollowLAExtension;
-			sourceTree = "<group>";
-		};
-		65AC25F52ECFD5E800421360 /* Stats */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Stats;
-			sourceTree = "<group>";
-		};
-		65AC26702ED245DF00421360 /* Treatments */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Treatments;
-			sourceTree = "<group>";
-		};
-		DDCC3AD72DDE1790006F1C10 /* Tests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Tests;
-			sourceTree = "<group>";
-		};
+		37989DB62F609B0C0004BD8B /* LoopFollowWatch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "LoopFollowWatch Watch App"; sourceTree = "<group>"; };
+		37A4BDDE2F5B6B4A00EEB289 /* LoopFollowLAExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = LoopFollowLAExtension; sourceTree = "<group>"; };
+		65AC25F52ECFD5E800421360 /* Stats */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Stats; sourceTree = "<group>"; };
+		65AC26702ED245DF00421360 /* Treatments */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Treatments; sourceTree = "<group>"; };
+		DDCC3AD72DDE1790006F1C10 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1195,7 +1145,6 @@
 				87F29BF9AF9359877E5BA232 /* OnboardingStepHeader.swift */,
 				B435465F52916697651D092B /* OnboardingViewModel.swift */,
 			);
-			name = Onboarding;
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
@@ -1234,7 +1183,6 @@
 				A183E857657EC6274FF98A49 /* UnitsStepView.swift */,
 				8F433127698B14CB9D27435E /* WelcomeStepView.swift */,
 			);
-			name = Steps;
 			path = Steps;
 			sourceTree = "<group>";
 		};
@@ -2096,7 +2044,7 @@
 			);
 			mainGroup = FC97880B2485969B00A7906C;
 			packageReferences = (
-				DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
+				DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			productRefGroup = FC9788152485969B00A7906C /* Products */;
 			projectDirPath = "";
@@ -3225,7 +3173,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+		DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
 			requirement = {
@@ -3238,7 +3186,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		DD50C10A2F60A00000000003 /* SocketIO */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			package = DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
 		};
 /* End XCSwiftPackageProductDependency section */

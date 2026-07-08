@@ -26,7 +26,7 @@ struct MainTabView: View {
             ForEach(Array(orderedItems.prefix(4).enumerated()), id: \.element) { index, item in
                 tabContent(for: item)
                     .tabItem {
-                        Label(item.displayName, systemImage: item.icon)
+                        tabLabel(item.displayName, systemImage: item.icon)
                     }
                     .tag(index)
             }
@@ -35,7 +35,7 @@ struct MainTabView: View {
                 MoreMenuView()
             }
             .tabItem {
-                Label("Menu", systemImage: "line.3.horizontal")
+                tabLabel("Menu", systemImage: "line.3.horizontal")
             }
             .tag(4)
         }
@@ -97,6 +97,21 @@ struct MainTabView: View {
     private func requestNotificationsIfAlarmsEnabled() {
         if Storage.shared.alarms.value.contains(where: { $0.isEnabled }) {
             NotificationAuthorization.requestIfNeeded()
+        }
+    }
+
+    /// Tab bar label with a fixed-size icon so large Dynamic Type sizes don't
+    /// grow the symbol and squeeze the title. The title font is pinned in AppDelegate.
+    private func tabLabel(_ title: String, systemImage: String) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .regular)
+            if let image = UIImage(systemName: systemImage, withConfiguration: config) {
+                Image(uiImage: image.withRenderingMode(.alwaysTemplate))
+            } else {
+                Image(systemName: systemImage)
+            }
         }
     }
 

@@ -54,6 +54,7 @@
 		4F631E2BF66B087FC13C1F73 /* LoopFollowLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDDE1C6D0A6A0B485E69E35 /* LoopFollowLogo.swift */; };
 		5544D8C363FB5D3B9BF8CE4A /* APNSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7C2676561D686C6459CAA2D /* APNSettingsView.swift */; };
 		56F338454E299FAC64852CEA /* OnboardingNavFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA6C22113453CBA1ACB5B6B /* OnboardingNavFooter.swift */; };
+		5E1A7128C37983AE02D78F72 /* AppBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FC4F0587B06A50E0ADB479 /* AppBannerView.swift */; };
 		654132E72E19EA7E00BDBE08 /* SimpleQRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654132E62E19EA7E00BDBE08 /* SimpleQRCodeScannerView.swift */; };
 		654132EA2E19F24800BDBE08 /* TOTPGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654132E92E19F24800BDBE08 /* TOTPGenerator.swift */; };
 		654134182E1DC09700BDBE08 /* OverridePresetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654134172E1DC09700BDBE08 /* OverridePresetsView.swift */; };
@@ -92,6 +93,7 @@
 		7B189D7B4652BFF77619D2D0 /* OnboardingStepHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F29BF9AF9359877E5BA232 /* OnboardingStepHeader.swift */; };
 		816BEA86D293E31C22160A92 /* DataSourceChoiceStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44640DC1DCF882EFD8F23877 /* DataSourceChoiceStepView.swift */; };
 		853A960D05091F25A0A7739A /* TelemetryStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FFFDD88DBFE4560180CBF8 /* TelemetryStepView.swift */; };
+		8B089A981C0E60AC4DDEF73A /* BannerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A9EDFACFDBC17965E5F221E /* BannerManager.swift */; };
 		922EFDDCE4620EA2AA1BB8BA /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEF2423FCFE9ACAE2E782BE /* OnboardingContainerView.swift */; };
 		9B38218995D302F21652EF1B /* AlarmsStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE6E4FA7512F11DD2A9C9E6C /* AlarmsStepView.swift */; };
 		9C7FB98C98BE4FF98F4815EE /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFBE69CEF18416D84959974 /* Telemetry.swift */; };
@@ -536,6 +538,7 @@
 		1B9BB58BEDE237640C71E28D /* NotificationsStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationsStepView.swift; sourceTree = "<group>"; };
 		1CDDE1C6D0A6A0B485E69E35 /* LoopFollowLogo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoopFollowLogo.swift; sourceTree = "<group>"; };
 		28FFFDD88DBFE4560180CBF8 /* TelemetryStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TelemetryStepView.swift; sourceTree = "<group>"; };
+		2A9EDFACFDBC17965E5F221E /* BannerManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BannerManager.swift; sourceTree = "<group>"; };
 		2B9BEC26E4E48EF9B811A372 /* PendingFutureCarb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingFutureCarb.swift; sourceTree = "<group>"; };
 		2EBAB9EECE7095238A558060 /* FutureCarbsCondition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureCarbsCondition.swift; sourceTree = "<group>"; };
 		374A77982F5BD8AB00E96858 /* APNSClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNSClient.swift; sourceTree = "<group>"; };
@@ -599,6 +602,7 @@
 		65E153C22E4BB69100693A4F /* URLTokenValidationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLTokenValidationView.swift; sourceTree = "<group>"; };
 		65E8A2852E44B0300065037B /* VolumeButtonHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtonHandler.swift; sourceTree = "<group>"; };
 		670CABC91A1D536AD124AAD7 /* NightscoutConnectStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NightscoutConnectStepView.swift; sourceTree = "<group>"; };
+		68FC4F0587B06A50E0ADB479 /* AppBannerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppBannerView.swift; sourceTree = "<group>"; };
 		87F29BF9AF9359877E5BA232 /* OnboardingStepHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingStepHeader.swift; sourceTree = "<group>"; };
 		8CFEF14D3CBE5F02078AC4A5 /* DexcomConnectStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DexcomConnectStepView.swift; sourceTree = "<group>"; };
 		8F433127698B14CB9D27435E /* WelcomeStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WelcomeStepView.swift; sourceTree = "<group>"; };
@@ -998,11 +1002,61 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		37989DB62F609B0C0004BD8B /* LoopFollowWatch Watch App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "LoopFollowWatch Watch App"; sourceTree = "<group>"; };
-		37A4BDDE2F5B6B4A00EEB289 /* LoopFollowLAExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = LoopFollowLAExtension; sourceTree = "<group>"; };
-		65AC25F52ECFD5E800421360 /* Stats */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Stats; sourceTree = "<group>"; };
-		65AC26702ED245DF00421360 /* Treatments */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Treatments; sourceTree = "<group>"; };
-		DDCC3AD72DDE1790006F1C10 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
+		37989DB62F609B0C0004BD8B /* LoopFollowWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = "LoopFollowWatch Watch App";
+			sourceTree = "<group>";
+		};
+		37A4BDDE2F5B6B4A00EEB289 /* LoopFollowLAExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = LoopFollowLAExtension;
+			sourceTree = "<group>";
+		};
+		65AC25F52ECFD5E800421360 /* Stats */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Stats;
+			sourceTree = "<group>";
+		};
+		65AC26702ED245DF00421360 /* Treatments */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Treatments;
+			sourceTree = "<group>";
+		};
+		DDCC3AD72DDE1790006F1C10 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1164,6 +1218,16 @@
 				B500000000000000000000B3 /* QuickPickMealsManager.swift */,
 			);
 			path = QuickPickMeals;
+			sourceTree = "<group>";
+		};
+		C82C291F37228B81A24DC96B /* Banner */ = {
+			isa = PBXGroup;
+			children = (
+				2A9EDFACFDBC17965E5F221E /* BannerManager.swift */,
+				68FC4F0587B06A50E0ADB479 /* AppBannerView.swift */,
+			);
+			name = Banner;
+			path = Banner;
 			sourceTree = "<group>";
 		};
 		D3510CAB68F35E41308421F1 /* Steps */ = {
@@ -1805,6 +1869,7 @@
 				DDEF503D2D32753A00999A5D /* Task */,
 				FCC68871248A736700A0279D /* ViewControllers */,
 				A5AD93643E93D5291B307C4E /* Onboarding */,
+				C82C291F37228B81A24DC96B /* Banner */,
 			);
 			path = LoopFollow;
 			sourceTree = "<group>";
@@ -2044,7 +2109,7 @@
 			);
 			mainGroup = FC97880B2485969B00A7906C;
 			packageReferences = (
-				DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */,
+				DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
 			);
 			productRefGroup = FC9788152485969B00A7906C /* Products */;
 			projectDirPath = "";
@@ -2659,6 +2724,8 @@
 				CEAB7A0A233173B735F9159E /* UnitsStepView.swift in Sources */,
 				DB000C760B27D7299E999BD5 /* WelcomeStepView.swift in Sources */,
 				1A29CE47990E05B45275A433 /* NotificationAuthorization.swift in Sources */,
+				8B089A981C0E60AC4DDEF73A /* BannerManager.swift in Sources */,
+				5E1A7128C37983AE02D78F72 /* AppBannerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3173,7 +3240,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */ = {
+		DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
 			requirement = {
@@ -3186,7 +3253,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		DD50C10A2F60A00000000003 /* SocketIO */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket" */;
+			package = DD50C10A2F60A00000000002 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
 			productName = SocketIO;
 		};
 /* End XCSwiftPackageProductDependency section */

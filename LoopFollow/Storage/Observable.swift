@@ -43,6 +43,7 @@ class Observable {
     var deviceBatteryLevel = ObservableValue<Double?>(default: nil)
     var deviceBatteryIsCharging = ObservableValue<Bool?>(default: nil)
     var pumpBatteryLevel = ObservableValue<Double?>(default: nil)
+    var dbSizePercentage = ObservableValue<Double?>(default: nil)
     var enactedOrSuggested = ObservableValue<TimeInterval?>(default: nil)
 
     var lastSentTOTP = ObservableValue<String?>(default: nil)

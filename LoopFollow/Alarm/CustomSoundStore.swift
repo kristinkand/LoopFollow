@@ -87,34 +87,42 @@ final class CustomSoundStore {
         queue.sync { fileURL(for: id) }
     }
 
-    /// Copy the audio at `sourceURL` into the store, validate it, and return a reference.
+    /// Import the audio at `sourceURL` into the store, validate it, and return a reference.
     func importFile(at sourceURL: URL) throws -> CustomSound {
         try queue.sync {
             let needsScope = sourceURL.startAccessingSecurityScopedResource()
             defer { if needsScope { sourceURL.stopAccessingSecurityScopedResource() } }
 
+            // Validate in place before touching the file so a rejected import never
+            // deletes the user's original.
             let size = (try? sourceURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
             if size > Self.maxFileBytes {
                 throw ImportError.tooLarge(size)
+            }
+            if !validateAudio(at: sourceURL) {
+                throw ImportError.notAudio
+            }
+            if let duration = audioDuration(at: sourceURL), duration > Self.maxDurationSeconds {
+                throw ImportError.tooLong(duration)
             }
 
             let newID = UUID()
             let ext = sourceURL.pathExtension.isEmpty ? "audio" : sourceURL.pathExtension
             let destURL = directory.appendingPathComponent("\(newID.uuidString).\(ext)")
 
+            // If the picked file already lives in our shared Documents folder, move it
+            // so absorbDroppedFiles() won't re-ingest the leftover original as a
+            // duplicate. Otherwise copy, leaving the source untouched.
+            let documentsRoot = directory.deletingLastPathComponent().resolvingSymlinksInPath().path
+            let sourceInDocuments = sourceURL.resolvingSymlinksInPath().path.hasPrefix(documentsRoot + "/")
             do {
-                try fileManager.copyItem(at: sourceURL, to: destURL)
+                if sourceInDocuments {
+                    try fileManager.moveItem(at: sourceURL, to: destURL)
+                } else {
+                    try fileManager.copyItem(at: sourceURL, to: destURL)
+                }
             } catch {
                 throw ImportError.unreadable
-            }
-
-            if !validateAudio(at: destURL) {
-                try? fileManager.removeItem(at: destURL)
-                throw ImportError.notAudio
-            }
-            if let duration = audioDuration(at: destURL), duration > Self.maxDurationSeconds {
-                try? fileManager.removeItem(at: destURL)
-                throw ImportError.tooLong(duration)
             }
 
             let displayName = sourceURL.deletingPathExtension().lastPathComponent

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2F99F2B5C902F3018383C086 /* BGChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5F575C47A06818042D6CB8C /* BGChartView.swift */; };
+		92664FA270DA9905E1F08676 /* BGChartStubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C508E0E86BEC0B13280F34B /* BGChartStubs.swift */; };
+		9F24B79D2722BB040AE3311F /* BGChartModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8CB992D98689FC7D019CEC /* BGChartModel.swift */; };
 		022E438B5B633BF98C80EFFE /* OnboardingStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19ED41524EF1ACAD2C3492B0 /* OnboardingStep.swift */; };
 		03165492EA35D2C6A19387A0 /* GeneralAlarmsStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CDCC93B0F2E3156936325A /* GeneralAlarmsStepView.swift */; };
 		0E0CFA0018332457E6C82318 /* NotificationsStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B9BB58BEDE237640C71E28D /* NotificationsStepView.swift */; };
@@ -204,7 +207,6 @@
 		DD608A0C2C27415C00F91132 /* BackgroundAlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD608A0B2C27415C00F91132 /* BackgroundAlertManager.swift */; };
 		DD6A935E2BFA6FA2003FFB8E /* DeviceStatusOpenAPS.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6A935D2BFA6FA2003FFB8E /* DeviceStatusOpenAPS.swift */; };
 		DD7A3B5D2F1E8D9A00B4C6E1 /* BGDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7A3B5C2F1E8D9A00B4C6E1 /* BGDisplayView.swift */; };
-		DD7A3B5F2F1E8DA000B4C6E1 /* LineChartWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7A3B5E2F1E8DA000B4C6E1 /* LineChartWrapper.swift */; };
 		DD7A3B612F1E8DA600B4C6E1 /* MainHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7A3B602F1E8DA600B4C6E1 /* MainHomeView.swift */; };
 		DD7B0D442D730A3B0063DCB6 /* CycleHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7B0D432D730A320063DCB6 /* CycleHelper.swift */; };
 		DD7E19842ACDA50C00DBD158 /* Overrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7E19832ACDA50C00DBD158 /* Overrides.swift */; };
@@ -341,7 +343,6 @@
 		FC16A97A24996673003D6245 /* NightScout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC16A97924996673003D6245 /* NightScout.swift */; };
 		FC16A97B249966A3003D6245 /* AlarmSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CE589248ABEA3001F83B8 /* AlarmSound.swift */; };
 		FC16A97D24996747003D6245 /* SpeakBG.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC16A97C24996747003D6245 /* SpeakBG.swift */; };
-		FC16A97F249969E2003D6245 /* Graphs.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC16A97E249969E2003D6245 /* Graphs.swift */; };
 		FC16A98124996C07003D6245 /* DateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC16A98024996C07003D6245 /* DateTime.swift */; };
 		FC1BDD2B24A22650001B652C /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1BDD2A24A22650001B652C /* Stats.swift */; };
 		FC1BDD2D24A23204001B652C /* MainViewController+updateStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1BDD2C24A23204001B652C /* MainViewController+updateStats.swift */; };
@@ -482,7 +483,6 @@
 		FCE537BC249A4D7D00F80BF8 /* carbBolusArrays.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE537BB249A4D7D00F80BF8 /* carbBolusArrays.swift */; };
 		FCEF87AC24A141A700AE6FA0 /* Localizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCEF87AA24A1417900AE6FA0 /* Localizer.swift */; };
 		FCFEEC9E2486E68E00402A7F /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCFEEC9D2486E68E00402A7F /* WebKit.framework */; };
-		FCFEECA02488157B00402A7F /* Chart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFEEC9F2488157B00402A7F /* Chart.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -535,6 +535,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6C508E0E86BEC0B13280F34B /* BGChartStubs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BGChartStubs.swift; sourceTree = "<group>"; };
+		7C8CB992D98689FC7D019CEC /* BGChartModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BGChartModel.swift; sourceTree = "<group>"; };
+		B5F575C47A06818042D6CB8C /* BGChartView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BGChartView.swift; sourceTree = "<group>"; };
 		04CDCC93B0F2E3156936325A /* GeneralAlarmsStepView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GeneralAlarmsStepView.swift; sourceTree = "<group>"; };
 		059B0FA59AABFE72FE13DDDA /* Pods-LoopFollow.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LoopFollow.release.xcconfig"; path = "Target Support Files/Pods-LoopFollow/Pods-LoopFollow.release.xcconfig"; sourceTree = "<group>"; };
 		0EEF2423FCFE9ACAE2E782BE /* OnboardingContainerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
@@ -722,7 +725,6 @@
 		DD608A0B2C27415C00F91132 /* BackgroundAlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAlertManager.swift; sourceTree = "<group>"; };
 		DD6A935D2BFA6FA2003FFB8E /* DeviceStatusOpenAPS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceStatusOpenAPS.swift; sourceTree = "<group>"; };
 		DD7A3B5C2F1E8D9A00B4C6E1 /* BGDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BGDisplayView.swift; sourceTree = "<group>"; };
-		DD7A3B5E2F1E8DA000B4C6E1 /* LineChartWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineChartWrapper.swift; sourceTree = "<group>"; };
 		DD7A3B602F1E8DA600B4C6E1 /* MainHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainHomeView.swift; sourceTree = "<group>"; };
 		DD7B0D432D730A320063DCB6 /* CycleHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleHelper.swift; sourceTree = "<group>"; };
 		DD7E19832ACDA50C00DBD158 /* Overrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Overrides.swift; sourceTree = "<group>"; };
@@ -862,7 +864,6 @@
 		F08D2AEE81333C406B874986 /* NotificationAuthorization.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAuthorization.swift; sourceTree = "<group>"; };
 		FC16A97924996673003D6245 /* NightScout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightScout.swift; sourceTree = "<group>"; };
 		FC16A97C24996747003D6245 /* SpeakBG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakBG.swift; sourceTree = "<group>"; };
-		FC16A97E249969E2003D6245 /* Graphs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Graphs.swift; sourceTree = "<group>"; };
 		FC16A98024996C07003D6245 /* DateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateTime.swift; sourceTree = "<group>"; };
 		FC1BDD2A24A22650001B652C /* Stats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stats.swift; sourceTree = "<group>"; };
 		FC1BDD2C24A23204001B652C /* MainViewController+updateStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+updateStats.swift"; sourceTree = "<group>"; };
@@ -1008,7 +1009,6 @@
 		FCE537C2249AAB2600F80BF8 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
 		FCEF87AA24A1417900AE6FA0 /* Localizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizer.swift; sourceTree = "<group>"; };
 		FCFEEC9D2486E68E00402A7F /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
-		FCFEEC9F2488157B00402A7F /* Chart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chart.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -1107,6 +1107,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		CC1E389FE3B6E6EA3184474B /* Charts */ = {
+			isa = PBXGroup;
+			children = (
+				7C8CB992D98689FC7D019CEC /* BGChartModel.swift */,
+				B5F575C47A06818042D6CB8C /* BGChartView.swift */,
+				6C508E0E86BEC0B13280F34B /* BGChartStubs.swift */,
+			);
+			path = Charts;
+			sourceTree = "<group>";
+		};
 		376310762F5CD65100656488 /* LiveActivity */ = {
 			isa = PBXGroup;
 			children = (
@@ -1710,7 +1720,6 @@
 				FC7CE589248ABEA3001F83B8 /* AlarmSound.swift */,
 				FC16A97924996673003D6245 /* NightScout.swift */,
 				FC16A97C24996747003D6245 /* SpeakBG.swift */,
-				FC16A97E249969E2003D6245 /* Graphs.swift */,
 				FC1BDD2A24A22650001B652C /* Stats.swift */,
 				FC1BDD2C24A23204001B652C /* MainViewController+updateStats.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* StatsDisplayModel.swift */,
@@ -1883,6 +1892,7 @@
 				DDC7E5CD2DC6637800EB1127 /* Storage */,
 				DDEF503D2D32753A00999A5D /* Task */,
 				FCC68871248A736700A0279D /* ViewControllers */,
+				CC1E389FE3B6E6EA3184474B /* Charts */,
 				A5AD93643E93D5291B307C4E /* Onboarding */,
 				C82C291F37228B81A24DC96B /* Banner */,
 			);
@@ -1955,7 +1965,6 @@
 				FCC688592489554800A0279D /* BackgroundTaskAudio.swift */,
 				A1A1A10001000000A0CFEED2 /* APNsCredentialValidator.swift */,
 				A8CA8BE0B3D247408FE088B4 /* BackgroundRefreshManager.swift */,
-				FCFEEC9F2488157B00402A7F /* Chart.swift */,
 				FCC0FAC124922A22003E610E /* DictionaryKeyPath.swift */,
 				FC16A98024996C07003D6245 /* DateTime.swift */,
 				654132E92E19F24800BDBE08 /* TOTPGenerator.swift */,
@@ -1983,7 +1992,6 @@
 			isa = PBXGroup;
 			children = (
 				DD7A3B5C2F1E8D9A00B4C6E1 /* BGDisplayView.swift */,
-				DD7A3B5E2F1E8DA000B4C6E1 /* LineChartWrapper.swift */,
 				DD7A3B602F1E8DA600B4C6E1 /* MainHomeView.swift */,
 				CC3D4E5F6A7B8C9D0E1F2A3B /* MoreMenuView.swift */,
 				EE5F6A7B8C9D0E1F2A3B4C5D /* NightscoutContentView.swift */,
@@ -2541,7 +2549,6 @@
 				DD4E5F6A7B8C9D0E2F2A3B4C /* RemoteContentView.swift in Sources */,
 				DD48780A2C7B30D40048F05C /* RemoteSettingsViewModel.swift in Sources */,
 				AB1CD0012C7B30D40048F05C /* RemoteDiagnostics.swift in Sources */,
-				FCFEECA02488157B00402A7F /* Chart.swift in Sources */,
 				DDDC31CE2E13A811009EA0F3 /* AlarmTile.swift in Sources */,
 				DD0C0C6D2C48606200DBADDF /* CarbMetric.swift in Sources */,
 				DDC7E5422DBD8A1600EB1127 /* AlarmGeneralSection.swift in Sources */,
@@ -2560,12 +2567,10 @@
 				DDF6999E2C5AAA640058A8D9 /* ErrorMessageView.swift in Sources */,
 				CC3D4E5F6A7B8C9D0E2F2A3B /* MoreMenuView.swift in Sources */,
 				DD7A3B5D2F1E8D9A00B4C6E1 /* BGDisplayView.swift in Sources */,
-				DD7A3B5F2F1E8DA000B4C6E1 /* LineChartWrapper.swift in Sources */,
 				DD7A3B612F1E8DA600B4C6E1 /* MainHomeView.swift in Sources */,
 				EE5F6A7B8C9D0E2F2A3B4C5D /* NightscoutContentView.swift in Sources */,
 				654132E72E19EA7E00BDBE08 /* SimpleQRCodeScannerView.swift in Sources */,
 				DD4878152C7B75230048F05C /* MealView.swift in Sources */,
-				FC16A97F249969E2003D6245 /* Graphs.swift in Sources */,
 				FC8589BF252B54F500C8FC73 /* Mobileprovision.swift in Sources */,
 				DD4878052C7B2C970048F05C /* Storage.swift in Sources */,
 				DD493AE12ACF22FE009A6922 /* Profile.swift in Sources */,
@@ -2613,6 +2618,9 @@
 				DD7F4C192DD63FD500D449E9 /* RecBolusAlarmEditor.swift in Sources */,
 				DDAD162F2D2EF9830084BE10 /* RileyLinkHeartbeatBluetoothDevice.swift in Sources */,
 				FC97881C2485969B00A7906C /* MainViewController.swift in Sources */,
+				9F24B79D2722BB040AE3311F /* BGChartModel.swift in Sources */,
+				2F99F2B5C902F3018383C086 /* BGChartView.swift in Sources */,
+				92664FA270DA9905E1F08676 /* BGChartStubs.swift in Sources */,
 				DD6A935E2BFA6FA2003FFB8E /* DeviceStatusOpenAPS.swift in Sources */,
 				DD493AD52ACF2109009A6922 /* ResumePump.swift in Sources */,
 				DD85E9952D739CFE001C8BB7 /* OmnipodDashHeartbeatBluetoothTransmitter.swift in Sources */,
@@ -2891,7 +2899,7 @@
 				INFOPLIST_FILE = LoopFollowLAExtension/ExtensionInfo.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LoopFollowLAExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Jon Fawcett. All rights reserved.";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2943,7 +2951,7 @@
 				INFOPLIST_FILE = LoopFollowLAExtension/ExtensionInfo.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LoopFollowLAExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Jon Fawcett. All rights reserved.";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2987,9 +2995,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(BUILT_PRODUCTS_DIR)/Charts",
 					"$(BUILT_PRODUCTS_DIR)/ShareClient",
-					"$(BUILT_PRODUCTS_DIR)/SwiftAlgorithms",
 				);
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3020,9 +3026,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(BUILT_PRODUCTS_DIR)/Charts",
 					"$(BUILT_PRODUCTS_DIR)/ShareClient",
-					"$(BUILT_PRODUCTS_DIR)/SwiftAlgorithms",
 				);
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3170,7 +3174,7 @@
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "$(LF_DEVELOPMENT_TEAM)";
 				INFOPLIST_FILE = LoopFollow/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3195,7 +3199,7 @@
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "$(LF_DEVELOPMENT_TEAM)";
 				INFOPLIST_FILE = LoopFollow/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

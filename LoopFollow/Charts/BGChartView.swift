@@ -618,40 +618,22 @@ private struct MainBGChart: View {
     // MARK: Selection
 
     private struct SelectionAnchor {
-        /// Where the pill/indicator is drawn — for boluses/carbs this is the
-        /// mark's (offset) x position, so the indicator lands on the symbol.
+        /// Where the pill/indicator is drawn — a treatment's `drawnDate`, so the
+        /// indicator lands on the symbol even when decluttering moved it.
         let date: Date
         let value: Double
         let text: String
     }
 
-    /// Feeds every treatment mark to `body` as (drawnDate, value, pillText),
-    /// with the same x offsets the canvas applies to boluses and carbs.
+    /// Feeds every treatment mark to `body` as (drawnDate, value, pillText).
     /// Single source for both the scrub lookup and the tap hit test.
     private func forEachTreatmentAnchor(_ body: (Date, Double, String) -> Void) {
-        for t in model.boluses {
-            body(t.date.addingTimeInterval(-150), t.sgv, t.pillText)
-        }
-        for t in model.carbs {
-            body(t.date.addingTimeInterval(-250), t.sgv, t.pillText)
-        }
-        for t in model.smbs {
-            body(t.date, t.sgv, t.pillText)
-        }
-        for t in model.bgChecks {
-            body(t.date, t.sgv, t.pillText)
-        }
-        for t in model.notes {
-            body(t.date, t.sgv, t.pillText)
-        }
-        for t in model.suspends {
-            body(t.date, t.sgv, t.pillText)
-        }
-        for t in model.resumes {
-            body(t.date, t.sgv, t.pillText)
-        }
-        for t in model.sensorStarts {
-            body(t.date, t.sgv, t.pillText)
+        for group in [model.boluses, model.carbs, model.smbs, model.bgChecks,
+                      model.notes, model.suspends, model.resumes, model.sensorStarts]
+        {
+            for t in group {
+                body(t.drawnDate, t.sgv, t.pillText)
+            }
         }
     }
 
@@ -961,7 +943,6 @@ private struct BGChartCanvas: View, Equatable {
             } else {
                 chart.chartXAxis {
                     AxisMarks(values: xAxisMarkDates()) { value in
-                        AxisGridLine()
                         AxisValueLabel {
                             if let date = value.as(Date.self) {
                                 xAxisLabel(for: date)
@@ -1093,7 +1074,7 @@ private struct BGChartCanvas: View, Equatable {
                 y: .value("rate", pt.rate * basalScale),
                 series: .value("series", "basalScheduled")
             )
-            .lineStyle(StrokeStyle(lineWidth: 0.5, dash: [2, 1]))
+            .lineStyle(StrokeStyle(lineWidth: 2, dash: [10, 5]))
             .foregroundStyle(Color.blue.opacity(0.8))
         }
     }
@@ -1220,9 +1201,9 @@ private struct BGChartCanvas: View, Equatable {
 
     @ChartContentBuilder
     private var treatmentMarks: some ChartContent {
-        ForEach(windowed(model.boluses) { $0.date }) { pt in
+        ForEach(windowed(model.boluses) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date.addingTimeInterval(-150)),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbolSize(isSmall ? 24 : 64)
@@ -1234,9 +1215,9 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
 
-        ForEach(windowed(model.carbs) { $0.date }) { pt in
+        ForEach(windowed(model.carbs) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date.addingTimeInterval(-250)),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbolSize(isSmall ? 24 : 64)
@@ -1248,9 +1229,9 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
 
-        ForEach(windowed(model.smbs) { $0.date }) { pt in
+        ForEach(windowed(model.smbs) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbol(DownwardTriangle())
@@ -1263,18 +1244,18 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
 
-        ForEach(windowed(model.bgChecks) { $0.date }) { pt in
+        ForEach(windowed(model.bgChecks) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbolSize(isSmall ? 22 : 54)
             .foregroundStyle(Color.red.opacity(0.75))
         }
 
-        ForEach(windowed(model.suspends) { $0.date }) { pt in
+        ForEach(windowed(model.suspends) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbol(.square)
@@ -1282,9 +1263,9 @@ private struct BGChartCanvas: View, Equatable {
             .foregroundStyle(Color.teal.opacity(0.75))
         }
 
-        ForEach(windowed(model.resumes) { $0.date }) { pt in
+        ForEach(windowed(model.resumes) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbol(.square)
@@ -1292,9 +1273,9 @@ private struct BGChartCanvas: View, Equatable {
             .foregroundStyle(Color.teal.opacity(0.5))
         }
 
-        ForEach(windowed(model.sensorStarts) { $0.date }) { pt in
+        ForEach(windowed(model.sensorStarts) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbol(.cross)
@@ -1302,9 +1283,9 @@ private struct BGChartCanvas: View, Equatable {
             .foregroundStyle(Color.indigo.opacity(0.75))
         }
 
-        ForEach(windowed(model.notes) { $0.date }) { pt in
+        ForEach(windowed(model.notes) { $0.drawnDate }) { pt in
             PointMark(
-                x: .value("time", pt.date),
+                x: .value("time", pt.drawnDate),
                 y: .value("sgv", pt.sgv)
             )
             .symbolSize(isSmall ? 22 : 54)
@@ -1315,11 +1296,11 @@ private struct BGChartCanvas: View, Equatable {
     @ChartContentBuilder
     private var ruleMarks: some ChartContent {
         RuleMark(y: .value("low", model.lowLine))
-            .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 2]))
+            .lineStyle(StrokeStyle(lineWidth: 2))
             .foregroundStyle(Color.red.opacity(0.5))
 
         RuleMark(y: .value("high", model.highLine))
-            .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 2]))
+            .lineStyle(StrokeStyle(lineWidth: 2))
             .foregroundStyle(Color.yellow.opacity(0.5))
 
         if model.now >= windowStart, model.now <= windowEnd {
@@ -1400,7 +1381,6 @@ private struct StaticYAxisOverlay: View, Equatable {
         }
         .chartYAxis {
             AxisMarks(position: .trailing) { value in
-                AxisGridLine()
                 AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {

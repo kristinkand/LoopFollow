@@ -121,6 +121,11 @@ private struct MainBGChart: View {
     /// Date under the user's finger while inspecting, else nil.
     @State private var selection: Date?
 
+    /// Finger's vertical position (shell coordinates) while inspecting. Lets a
+    /// scrub disambiguate a BG reading from a treatment that shares its time by
+    /// picking whichever symbol the finger sits closer to.
+    @State private var selectionY: CGFloat?
+
     /// Anchor selected by tapping a mark; sticky until the user taps empty
     /// space, taps another mark, or starts a pan/zoom/inspect.
     @State private var tapped: SelectionAnchor?
@@ -396,7 +401,7 @@ private struct MainBGChart: View {
                 }
 
                 if isInspectLatched {
-                    updateSelection(atViewportX: value.location.x, viewportWidth: viewportWidth)
+                    updateSelection(atViewportX: value.location.x, y: value.location.y, viewportWidth: viewportWidth)
                     return
                 }
 
@@ -460,19 +465,20 @@ private struct MainBGChart: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             scrubHaptic.prepare()
             if let location = lastTouchLocation {
-                updateSelection(atViewportX: location.x, viewportWidth: viewportWidth)
+                updateSelection(atViewportX: location.x, y: location.y, viewportWidth: viewportWidth)
             }
         }
     }
 
-    private func updateSelection(atViewportX x: CGFloat, viewportWidth: CGFloat) {
+    private func updateSelection(atViewportX x: CGFloat, y: CGFloat, viewportWidth: CGFloat) {
         let fraction = min(max(x / viewportWidth, 0), 1)
         let date = interaction.scrollPosition.addingTimeInterval(
             interaction.visibleSeconds * TimeInterval(fraction)
         )
         selection = date
+        selectionY = y
         // A featherlight tick whenever the scrub lands on a different anchor.
-        if let anchor = nearestSelectionAnchor(for: date), anchor.date != lastHapticAnchorDate {
+        if let anchor = nearestSelectionAnchor(for: date, near: y), anchor.date != lastHapticAnchorDate {
             lastHapticAnchorDate = anchor.date
             scrubHaptic.selectionChanged()
             scrubHaptic.prepare()
@@ -654,11 +660,25 @@ private struct MainBGChart: View {
         return nil
     }
 
-    /// Scrub lookup (time-only). Treatments win whenever one is within
-    /// `treatmentScrubTolerance` of the scrub time — a BG reading exists
-    /// within 2.5 min of *any* time, so a plain nearest-by-time would
-    /// otherwise never surface a treatment.
-    private func nearestSelectionAnchor(for selected: Date) -> SelectionAnchor? {
+    /// Scrub lookup. A BG reading exists within 2.5 min of *any* time, so a
+    /// treatment within `treatmentScrubTolerance` of the scrub time normally
+    /// wins — otherwise a plain nearest-by-time would never surface it. But
+    /// treatments are drawn offset from the glucose trace (boluses/SMBs above
+    /// it, carbs above or below), so when the finger's vertical position is
+    /// known it breaks that tie: aiming at the trace lands on the BG reading,
+    /// aiming at the symbol lands on the treatment. This keeps every BG reading
+    /// reachable even when a treatment shares its time.
+    private func nearestSelectionAnchor(for selected: Date, near fingerY: CGFloat? = nil) -> SelectionAnchor? {
+        var bestBG: SelectionAnchor?
+        var bestBGDistance: TimeInterval = .greatestFiniteMagnitude
+        for p in model.bg {
+            let d = abs(p.date.timeIntervalSince(selected))
+            if d < bestBGDistance {
+                bestBGDistance = d
+                bestBG = SelectionAnchor(date: p.date, value: p.value, text: "BG\n\(Localizer.toDisplayUnits(String(Int(p.value))))\n\(model.pillTimeString(for: p.date))")
+            }
+        }
+
         var bestTreatment: SelectionAnchor?
         var bestTreatmentDistance: TimeInterval = .greatestFiniteMagnitude
         forEachTreatmentAnchor { date, value, text in
@@ -668,18 +688,17 @@ private struct MainBGChart: View {
                 bestTreatment = SelectionAnchor(date: date, value: value, text: text)
             }
         }
-        if let bestTreatment, bestTreatmentDistance <= BGChartConfig.treatmentScrubTolerance {
-            return bestTreatment
-        }
 
-        var bestBG: SelectionAnchor?
-        var bestBGDistance: TimeInterval = .greatestFiniteMagnitude
-        for p in model.bg {
-            let d = abs(p.date.timeIntervalSince(selected))
-            if d < bestBGDistance {
-                bestBGDistance = d
-                bestBG = SelectionAnchor(date: p.date, value: p.value, text: "BG\n\(Localizer.toDisplayUnits(String(Int(p.value))))\n\(model.pillTimeString(for: p.date))")
+        // A treatment near the scrub time normally wins (its narrow time band
+        // is otherwise unhittable by time alone), but when the finger's height
+        // sits closer to the BG reading, surface BG instead so it stays reachable.
+        if let bestTreatment, bestTreatmentDistance <= BGChartConfig.treatmentScrubTolerance {
+            if let fingerY, let bestBG, plotFrame.height > 0 {
+                let bgDy = abs(yPosition(forValue: bestBG.value) - fingerY)
+                let treatmentDy = abs(yPosition(forValue: bestTreatment.value) - fingerY)
+                return bgDy < treatmentDy ? bestBG : bestTreatment
             }
+            return bestTreatment
         }
 
         if bestBGDistance <= min(bestTreatmentDistance, BGChartConfig.selectionTolerance) {
@@ -743,7 +762,7 @@ private struct MainBGChart: View {
     /// The anchor the overlay should show: a live scrub wins over a sticky tap.
     private func activeAnchor() -> SelectionAnchor? {
         if isInspectLatched, let selected = selection {
-            return nearestSelectionAnchor(for: selected)
+            return nearestSelectionAnchor(for: selected, near: selectionY)
         }
         return tapped
     }

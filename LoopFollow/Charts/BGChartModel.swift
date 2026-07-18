@@ -23,14 +23,14 @@ final class BGChartInteraction: ObservableObject {
         scrollPosition = Date().addingTimeInterval(-seconds * 0.7)
     }
 
-    /// Maps the legacy persisted zoom scale (danielgindi-era semantics:
-    /// 24 h divided by the scale factor) to a visible-window length.
+    /// Maps the persisted zoom scale (24 h divided by the scale factor) to a
+    /// visible-window length.
     static func visibleSeconds(forScale scale: Double) -> TimeInterval {
         guard scale > 0 else { return 6 * 3600 }
         return min(max(24 * 3600 / scale, 15 * 60), 24 * 3600)
     }
 
-    /// Persists the current zoom back into the legacy scale representation.
+    /// Persists the current zoom back into the stored scale representation.
     func persistZoom() {
         Storage.shared.chartScaleX.value = 24 * 3600 / visibleSeconds
     }
@@ -83,6 +83,7 @@ final class BGChartModel: ObservableObject {
         let end: Date
         let yBottom: Double
         let yTop: Double
+        let label: String
         let pillText: String
         var id: String { "\(start.timeIntervalSince1970)-\(end.timeIntervalSince1970)" }
     }
@@ -209,7 +210,7 @@ final class BGChartModel: ObservableObject {
         pillTimeFormatter.string(from: date)
     }
 
-    /// Legacy Nightscout remote-command error notes embed a JSON payload after
+    /// Nightscout remote-command error notes embed a JSON payload after
     /// the human-readable message ("Error text {\"bolus-entry\": 1.5, ...}").
     /// Returns the message plus a compact summary of the payload, or nil when
     /// the note contains no JSON.
@@ -261,8 +262,7 @@ final class BGChartModel: ObservableObject {
     }
 
     /// Groups consecutive same-colored readings into line runs (see BGRun).
-    /// The segment between two points takes the color of the earlier point,
-    /// matching the legacy per-segment coloring.
+    /// The segment between two points takes the color of the earlier point.
     private static func makeRuns(_ points: [BGPoint]) -> [BGRun] {
         guard let first = points.first else { return [] }
         var runs: [BGRun] = []
@@ -371,7 +371,7 @@ final class BGChartModel: ObservableObject {
     }
 
     /// Schedules a rebuild, coalescing bursts: a refresh cycle calls a dozen
-    /// legacy update*Graph() shims back-to-back, and rebuilding once per
+    /// update*Graph() entry points back-to-back, and rebuilding once per
     /// runloop turn is enough.
     func rebuild() {
         guard !rebuildScheduled else {
@@ -410,8 +410,8 @@ final class BGChartModel: ObservableObject {
         overrideColor = isLoop ? .green : .purple
         tempTargetColor = isLoop ? .purple : .green
 
-        // Clamp plotted BG to the display range (matches the legacy chart and #600);
-        // color is still keyed off the true reading.
+        // Clamp plotted BG to the display range (see #600); color is still
+        // keyed off the true reading.
         let minDisplay = globalVariables.minDisplayGlucose
         let maxDisplay = globalVariables.maxDisplayGlucose
         func clampSgv(_ sgv: Int) -> Double { Double(min(max(sgv, minDisplay), maxDisplay)) }
@@ -522,12 +522,15 @@ final class BGChartModel: ObservableObject {
         let yTop = maxBG - 5
         let yBottom = maxBG - 25
         overrides = vc.overrideGraphData.map {
-            BandRect(
+            let overrideName = $0.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayName = overrideName.isEmpty ? "Override" : overrideName
+            return BandRect(
                 start: Date(timeIntervalSince1970: $0.date),
                 end: Date(timeIntervalSince1970: $0.endDate),
                 yBottom: yBottom,
                 yTop: yTop,
-                pillText: "Override x\(String(format: "%.2f", $0.insulNeedsScaleFactor))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                label: displayName,
+                pillText: "Override\n\(displayName)\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
             )
         }
         tempTargets = vc.tempTargetGraphData.map {
@@ -537,6 +540,7 @@ final class BGChartModel: ObservableObject {
                 end: Date(timeIntervalSince1970: $0.endDate),
                 yBottom: yBottom,
                 yTop: yTop,
+                label: "Temp Target",
                 pillText: "Temp Target\n\(Localizer.toDisplayUnits(target))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
             )
         }
@@ -547,10 +551,9 @@ final class BGChartModel: ObservableObject {
         domainStart = currentNow.addingTimeInterval(-hoursBack)
         // Everything drawn in the future (predictions, cone, override/temp-target
         // bands) is bounded by the "Hours of Prediction" setting, so the scale
-        // domain ends there too — matching the legacy chart, whose x range
-        // auto-fit to the last plotted point. The 15-minute floor keeps room for
-        // follow mode's right-side padding when predictions are set to 0 (and
-        // matches the floor Overrides.swift uses for future bands).
+        // domain ends there too. The 15-minute floor keeps room for follow
+        // mode's right-side padding when predictions are set to 0 (and matches
+        // the floor Overrides.swift uses for future bands).
         let hoursForward = max(Storage.shared.predictionToLoad.value, 0.25) * 3600
         domainEnd = currentNow.addingTimeInterval(hoursForward)
 

@@ -42,7 +42,7 @@ private enum BGChartConfig {
     /// leaving room on the right for predictions/cone.
     static let followNowFraction = 0.7
     /// How long after the last navigation in history before a data tick pulls
-    /// the chart back to "now" (mirrors the legacy autoScrollPauseUntil).
+    /// the chart back to "now".
     static let autoFollowPause: TimeInterval = 5 * 60
     /// Max distance between the scrub date and an anchor for it to be selected.
     static let selectionTolerance: TimeInterval = 20 * 60
@@ -55,6 +55,14 @@ private enum BGChartConfig {
     static let scrubCaptureMaxSeconds: TimeInterval = 5 * 60
     /// Screen-space radius (pt) within which a tap selects a mark.
     static let tapHitRadius: CGFloat = 30
+}
+
+/// Small y-domain headroom keeps the top axis label readable instead of
+/// pinning it to the chart edge.
+private func chartYDomainUpperBound(_ maxBG: Double) -> Double {
+    let clampedMax = max(maxBG, 1)
+    let topPadding = max(clampedMax * 0.02, 1)
+    return clampedMax + topPadding
 }
 
 struct BGChartView: View {
@@ -79,8 +87,7 @@ struct BGChartView: View {
 
 /// The interactive BG chart.
 ///
-/// Rendering/interaction strategy (adapted from Trio's MainChartView,
-/// https://github.com/nightscout/Trio, MIT license): the chart content is
+/// Rendering/interaction strategy: the chart content is
 /// laid out ONCE per (data, zoom) change onto a wide fixed-width canvas
 /// covering a render window around the visible viewport. Panning translates
 /// that canvas with a pure `.offset` transform — the canvas is an Equatable
@@ -152,8 +159,7 @@ private struct MainBGChart: View {
 
     /// While the user is (or recently was) navigating history, auto-return to
     /// "now" is paused until this instant. Refreshed by every scroll movement
-    /// away from the live edge, cleared on return to it — the successor of the
-    /// legacy autoScrollPauseUntil.
+    /// away from the live edge, cleared on return to it.
     @State private var autoFollowPausedUntil: Date?
 
     private var timeZoneForAxis: TimeZone {
@@ -213,6 +219,9 @@ private struct MainBGChart: View {
             selectionOverlay(viewportWidth: viewportWidth)
                 .allowsHitTesting(false)
 
+            overrideBandLabelsOverlay(viewportWidth: viewportWidth)
+                .allowsHitTesting(false)
+
             if !interaction.followLatest {
                 jumpToNowButton
             }
@@ -250,7 +259,7 @@ private struct MainBGChart: View {
                 scrollToNow(animated: true)
             } else if let pausedUntil = autoFollowPausedUntil, Date() >= pausedUntil {
                 // Idle in history past the pause: the next data tick pulls the
-                // chart back to live, like the legacy chart did.
+                // chart back to live.
                 scrollToNow(animated: true)
             }
             updateRenderWindow()
@@ -648,6 +657,23 @@ private struct MainBGChart: View {
         "BG\n\(Localizer.toDisplayUnits(String(Int(point.value))))\n\(model.pillTimeString(for: point.date))"
     }
 
+    private func bandPillTexts(at date: Date) -> [String] {
+        var texts: [String] = []
+        if let band = model.overrides
+            .filter({ date >= $0.start && date <= $0.end })
+            .max(by: { $0.start < $1.start })
+        {
+            texts.append(band.pillText)
+        }
+        if let band = model.tempTargets
+            .filter({ date >= $0.start && date <= $0.end })
+            .max(by: { $0.start < $1.start })
+        {
+            texts.append(band.pillText)
+        }
+        return texts
+    }
+
     /// Band (override / temp target) under the given date+value, if any.
     private func bandAnchor(at date: Date, value: Double) -> SelectionAnchor? {
         for band in model.overrides where date >= band.start && date <= band.end {
@@ -714,14 +740,16 @@ private struct MainBGChart: View {
             items.append(nearestBG)
         }
         if let primary = items.min(by: { $0.distance < $1.distance }) {
-            return SelectionAnchor(date: primary.date, value: primary.value, texts: items.map(\.text))
+            let texts = items.map(\.text) + bandPillTexts(at: selected)
+            return SelectionAnchor(date: primary.date, value: primary.value, texts: texts)
         }
 
         // Nothing under the finger. Reach for the nearest treatment (data gaps
         // leave treatments without BG neighbors), then for a band (any height)
         // at the scrub time.
         if let nearestTreatment, nearestTreatment.distance <= BGChartConfig.selectionTolerance {
-            return SelectionAnchor(date: nearestTreatment.date, value: nearestTreatment.value, texts: [nearestTreatment.text])
+            let texts = [nearestTreatment.text] + bandPillTexts(at: selected)
+            return SelectionAnchor(date: nearestTreatment.date, value: nearestTreatment.value, texts: texts)
         }
         for band in model.overrides where selected >= band.start && selected <= band.end {
             let midY = (band.yTop + band.yBottom) / 2
@@ -765,7 +793,11 @@ private struct MainBGChart: View {
             )
             return bandAnchor(at: date, value: value(atY: location.y))
         }
-        return best
+        if let best {
+            let texts = best.texts + bandPillTexts(at: best.date)
+            return SelectionAnchor(date: best.date, value: best.value, texts: texts)
+        }
+        return nil
     }
 
     private func handleTap(at location: CGPoint, viewportWidth: CGFloat) {
@@ -790,14 +822,45 @@ private struct MainBGChart: View {
     }
 
     private func yPosition(forValue value: Double) -> CGFloat {
-        let clamped = min(max(value, 0), model.maxBG)
-        return plotFrame.minY + CGFloat(1 - clamped / model.maxBG) * plotFrame.height
+        let yMax = chartYDomainUpperBound(model.maxBG)
+        let clamped = min(max(value, 0), yMax)
+        return plotFrame.minY + CGFloat(1 - clamped / yMax) * plotFrame.height
     }
 
     private func value(atY y: CGFloat) -> Double {
         guard plotFrame.height > 0 else { return 0 }
+        let yMax = chartYDomainUpperBound(model.maxBG)
         let fraction = 1 - (y - plotFrame.minY) / plotFrame.height
-        return Double(min(max(fraction, 0), 1)) * model.maxBG
+        return Double(min(max(fraction, 0), 1)) * yMax
+    }
+
+    @ViewBuilder
+    private func overrideBandLabelsOverlay(viewportWidth: CGFloat) -> some View {
+        if plotFrame.height > 0 {
+            let visibleStart = interaction.scrollPosition
+            let visibleEnd = interaction.scrollPosition.addingTimeInterval(interaction.visibleSeconds)
+
+            ForEach(model.overrides.filter { $0.end >= visibleStart && $0.start <= visibleEnd }) { band in
+                let visibleBandStart = max(band.start, visibleStart)
+                let visibleBandEnd = min(band.end, visibleEnd)
+                let xStart = xPosition(for: visibleBandStart, viewportWidth: viewportWidth)
+                let xEnd = xPosition(for: visibleBandEnd, viewportWidth: viewportWidth)
+                let bandWidth = max(0, xEnd - xStart)
+                let y = yPosition(forValue: (band.yBottom + band.yTop) / 2)
+
+                if bandWidth > 24 {
+                    Text(band.label)
+                        .font(.caption2)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.trailing, 10)
+                        .frame(width: max(0, bandWidth - 6), alignment: .trailing)
+                        .clipped()
+                        .position(x: xStart + bandWidth / 2, y: y)
+                }
+            }
+        }
     }
 
     /// Vertical indicator + pill for the current selection, rendered in the
@@ -806,9 +869,9 @@ private struct MainBGChart: View {
     ///
     /// The pill wraps long texts (notes) at its max width; placement uses the
     /// measured pill size so the pill always sits fully on screen, below the
-    /// anchor when there is room and above it otherwise. (The legacy chart did
-    /// this by inserting line breaks every 40 characters; SwiftUI's own word
-    /// wrapping respects the actual font metrics, so no manual splitting.)
+    /// anchor when there is room and above it otherwise. Wrapping relies on
+    /// SwiftUI's word wrapping, which respects the actual font metrics, so
+    /// there is no manual line splitting.
     @ViewBuilder
     private func selectionOverlay(viewportWidth: CGFloat) -> some View {
         if plotFrame.height > 0, let anchor = activeAnchor(viewportWidth: viewportWidth) {
@@ -966,7 +1029,7 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
         .chartXScale(domain: windowStart ... windowEnd)
-        .chartYScale(domain: 0 ... model.maxBG)
+        .chartYScale(domain: 0 ... chartYDomainUpperBound(model.maxBG))
         .chartLegend(.hidden)
         .chartYAxis(.hidden)
 
@@ -1120,7 +1183,7 @@ private struct BGChartCanvas: View, Equatable {
                 yStart: .value("yMin", pt.yMin),
                 yEnd: .value("yMax", pt.yMax)
             )
-            // Same fill as the legacy ConeOfUncertaintyRenderer (and Trio's cone).
+            // Same fill as Trio's cone.
             .foregroundStyle(Color(.systemBlue).opacity(0.4))
             .interpolationMethod(.monotone)
         }
@@ -1403,7 +1466,7 @@ private struct StaticYAxisOverlay: View, Equatable {
                 .opacity(0)
         }
         .chartXScale(domain: 0 ... 1)
-        .chartYScale(domain: 0 ... maxBG)
+        .chartYScale(domain: 0 ... chartYDomainUpperBound(maxBG))
         .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(values: [0.5]) { _ in

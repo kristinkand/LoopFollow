@@ -28,7 +28,6 @@ struct NightscoutSettingsView: View {
                 continueSection
             }
 
-            webSocketSection
             importSection
         }
         .sheet(item: $activeInfoSheet) { sheet in

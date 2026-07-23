@@ -15,6 +15,11 @@ class Observable {
     var tempTarget = ObservableValue<HKQuantity?>(default: nil)
     var override = ObservableValue<String?>(default: nil)
 
+    /// End of the active override as Unix epoch seconds; nil = no override or indefinite.
+    var overrideEndAt = ObservableValue<TimeInterval?>(default: nil)
+    /// End of the active temp target as Unix epoch seconds; nil = no active temp target.
+    var tempTargetEndAt = ObservableValue<TimeInterval?>(default: nil)
+
     var minAgoText = ObservableValue<String>(default: "?? min ago")
     var bgText = ObservableValue<String>(default: "BG")
     var bg = ObservableValue<Int?>(default: nil)
@@ -31,6 +36,9 @@ class Observable {
     var predictionColor = ObservableValue<Color>(default: .purple)
 
     var currentAlarm = ObservableValue<UUID?>(default: nil)
+    /// Replaces the current alarm's name on screen when the firing needs its
+    /// own wording (e.g. an end alarm's early warning); nil shows the name.
+    var currentAlarmTitleOverride = ObservableValue<String?>(default: nil)
     var alarmSoundPlaying = ObservableValue<Bool>(default: false)
 
     var debug = ObservableValue<Bool>(default: false)

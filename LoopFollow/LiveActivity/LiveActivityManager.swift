@@ -187,6 +187,7 @@ final class LiveActivityManager {
         LAAppGroupSettings.setThresholds(
             lowMgdl: Storage.shared.lowLine.value,
             highMgdl: Storage.shared.highLine.value,
+            targetMgdl: Storage.shared.targetLine.value,
         )
         GlucoseSnapshotStore.shared.save(snapshot)
 
@@ -644,6 +645,7 @@ final class LiveActivityManager {
             LAAppGroupSettings.setThresholds(
                 lowMgdl: Storage.shared.lowLine.value,
                 highMgdl: Storage.shared.highLine.value,
+                targetMgdl: Storage.shared.targetLine.value,
             )
             LAAppGroupSettings.setDisplayName(
                 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "LoopFollow",
@@ -1051,6 +1053,7 @@ final class LiveActivityManager {
         LAAppGroupSettings.setThresholds(
             lowMgdl: Storage.shared.lowLine.value,
             highMgdl: Storage.shared.highLine.value,
+            targetMgdl: Storage.shared.targetLine.value,
         )
         GlucoseSnapshotStore.shared.save(snapshot)
         // WatchConnectivityManager.shared.send(snapshot: snapshot)

@@ -776,34 +776,13 @@ private enum LAColors {
     static func backgroundTint(for snapshot: GlucoseSnapshot) -> Color {
         let mgdl = snapshot.glucose
         let t = LAAppGroupSettings.thresholdsMgdl()
-        let low = t.low
-        let high = t.high
-
-        if mgdl < low {
-            let raw = 0.48 + (0.85 - 0.48) * ((low - mgdl) / (low - 54.0))
-            let opacity = min(max(raw, 0.48), 0.85)
-            return Color(uiColor: UIColor.systemRed).opacity(opacity)
-        } else if mgdl > high {
-            let raw = 0.44 + (0.85 - 0.44) * ((mgdl - high) / (324.0 - high))
-            let opacity = min(max(raw, 0.44), 0.85)
-            return Color(uiColor: UIColor.systemOrange).opacity(opacity)
-        } else {
-            return Color(uiColor: UIColor.systemGreen).opacity(0.36)
-        }
+        let opacity: Double = (mgdl < t.low || mgdl > t.high) ? 0.6 : 0.36
+        return dynamicGlucoseColor(glucoseValue: mgdl, low: t.low, target: t.target, high: t.high).opacity(opacity)
     }
 
     static func keyline(for snapshot: GlucoseSnapshot) -> Color {
         let mgdl = snapshot.glucose
         let t = LAAppGroupSettings.thresholdsMgdl()
-        let low = t.low
-        let high = t.high
-
-        if mgdl < low {
-            return Color(uiColor: UIColor.systemRed)
-        } else if mgdl > high {
-            return Color(uiColor: UIColor.systemOrange)
-        } else {
-            return Color(uiColor: UIColor.systemGreen)
-        }
+        return dynamicGlucoseColor(glucoseValue: mgdl, low: t.low, target: t.target, high: t.high)
     }
 }

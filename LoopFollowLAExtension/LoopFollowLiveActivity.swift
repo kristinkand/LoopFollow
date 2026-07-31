@@ -187,7 +187,6 @@ private struct LockScreenLiveActivityView: View {
 
     var body: some View {
         let s = state.snapshot
-        let slotConfig = LAAppGroupSettings.slots()
 
         VStack(spacing: 6) {
             HStack(spacing: 12) {
@@ -221,13 +220,6 @@ private struct LockScreenLiveActivityView: View {
                 LAHistoryGraphView(history: s.history)
                     .frame(maxWidth: .infinity)
                     .frame(height: 60)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.20))
-                    .frame(width: 1)
-                    .padding(.vertical, 8)
-
-                SlotView(option: slotConfig[0], snapshot: s)
             }
 
             ActiveAdjustmentsView(snapshot: s)
@@ -790,7 +782,7 @@ private struct LAHistoryGraphView: View {
                         y: .value("BG", b.v)
                     )
                     .foregroundStyle(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high))
-                    .lineStyle(StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
                 }
             }
             .chartXAxis(.hidden)
@@ -809,7 +801,7 @@ private enum LAColors {
     static func backgroundTint(for snapshot: GlucoseSnapshot) -> Color {
         let mgdl = snapshot.glucose
         let t = LAAppGroupSettings.thresholdsMgdl()
-        let opacity: Double = (mgdl < t.low || mgdl > t.high) ? 0.6 : 0.36
+        let opacity: Double = (mgdl < t.low || mgdl > t.high) ? 0.8 : 0.6
         return dynamicGlucoseColor(glucoseValue: mgdl, low: t.low, target: t.target, high: t.high).opacity(opacity)
     }
 

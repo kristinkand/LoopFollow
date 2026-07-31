@@ -2,6 +2,7 @@
 // LoopFollowLiveActivity.swift
 
 import ActivityKit
+import Charts
 import SwiftUI
 import WidgetKit
 
@@ -222,17 +223,18 @@ private struct LockScreenLiveActivityView: View {
                     .frame(width: 1)
                     .padding(.vertical, 8)
 
-                VStack(spacing: 8) {
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[0], snapshot: s)
-                        SlotView(option: slotConfig[1], snapshot: s)
-                    }
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[2], snapshot: s)
-                        SlotView(option: slotConfig[3], snapshot: s)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                LAHistoryGraphView(history: s.history)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(height: 44)
+            }
+
+            HStack(spacing: 12) {
+                SlotView(option: slotConfig[0], snapshot: s)
+                SlotView(option: slotConfig[1], snapshot: s)
+            }
+            HStack(spacing: 12) {
+                SlotView(option: slotConfig[2], snapshot: s)
+                SlotView(option: slotConfig[3], snapshot: s)
             }
 
             ActiveAdjustmentsView(snapshot: s)
@@ -767,6 +769,43 @@ private enum LAFormat {
 
     static func updated(_ s: GlucoseSnapshot) -> String {
         hhmmFormatter.string(from: s.updatedAt)
+    }
+}
+
+// MARK: - Lock screen history graph
+
+/// Mini version of the main screen's BG graph for the Lock Screen widget.
+/// Colors each short line segment with the same dynamic gradient as the main
+/// chart and the glucose number, using each segment's midpoint value.
+private struct LAHistoryGraphView: View {
+    let history: [LAHistoryPoint]
+
+    var body: some View {
+        if history.count < 2 {
+            Color.clear
+        } else {
+            let t = LAAppGroupSettings.thresholdsMgdl()
+            Chart {
+                ForEach(Array(zip(history, history.dropFirst())), id: \.0.d) { a, b in
+                    let midValue = (Double(a.v) + Double(b.v)) / 2
+                    LineMark(
+                        x: .value("Time", Date(timeIntervalSince1970: a.d)),
+                        y: .value("BG", a.v)
+                    )
+                    LineMark(
+                        x: .value("Time", Date(timeIntervalSince1970: b.d)),
+                        y: .value("BG", b.v)
+                    )
+                    .foregroundStyle(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high))
+                }
+            }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartLegend(.hidden)
+            .chartPlotStyle { plot in
+                plot.background(.clear)
+            }
+        }
     }
 }
 

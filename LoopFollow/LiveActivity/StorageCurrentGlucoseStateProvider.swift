@@ -153,4 +153,10 @@ struct StorageCurrentGlucoseStateProvider: CurrentGlucoseStateProviding {
             return Storage.shared.laRenewalFailed.value
         #endif
     }
+
+    // MARK: - History
+
+    var history: [LAHistoryPoint] {
+        Storage.shared.lastBgHistory.value
+    }
 }

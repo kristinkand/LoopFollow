@@ -118,11 +118,6 @@ private struct SmallFamilyView: View {
                         .foregroundStyle(LAColors.keyline(for: snapshot))
                 }
 
-                // TEMPORARY DEBUG -- remove after diagnosing color issue
-                Text("DBG \(LAAppGroupSettings.thresholdsMgdl().low, specifier: "%.0f")/\(LAAppGroupSettings.thresholdsMgdl().target, specifier: "%.0f")/\(LAAppGroupSettings.thresholdsMgdl().high, specifier: "%.0f")")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.yellow)
-
                 Text("\(LAFormat.delta(snapshot)) \(snapshot.unit.displayName)")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -200,7 +195,7 @@ private struct LockScreenLiveActivityView: View {
                         Text(LAFormat.glucose(s))
                             .font(.system(size: 46, weight: .bold, design: .rounded))
                             .monospacedDigit()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(LAColors.keyline(for: s))
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
                             .allowsTightening(true)
@@ -562,7 +557,7 @@ private struct DynamicIslandCompactLeadingView: View {
             Text(LAFormat.glucose(snapshot))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(LAColors.keyline(for: snapshot))
         }
     }
 }
@@ -578,7 +573,7 @@ private struct DynamicIslandMinimalView: View {
             Text(LAFormat.glucose(snapshot))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(LAColors.keyline(for: snapshot))
         }
     }
 }

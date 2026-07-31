@@ -201,7 +201,7 @@ private struct LockScreenLiveActivityView: View {
                             .allowsTightening(true)
                             .layoutPriority(3)
 
-                        Text(LAFormat.trendArrow(s))
+                        Text(LAFormat.trendEmoji(s))
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
@@ -622,6 +622,20 @@ private enum LAFormat {
         case .downSlight: "↘︎"
         case .down: "↓"
         case .downFast: "↓↓"
+        case .unknown: "–"
+        }
+    }
+
+    /// Lock Screen-only themed trend icon (see file header for the mapping).
+    static func trendEmoji(_ s: GlucoseSnapshot) -> String {
+        switch s.trend {
+        case .upFast: "🚀"
+        case .up: "🚀"
+        case .upSlight: "🛫"
+        case .flat: "🛸"
+        case .downSlight: "🛬"
+        case .down: "🪂"
+        case .downFast: "🪂"
         case .unknown: "–"
         }
     }

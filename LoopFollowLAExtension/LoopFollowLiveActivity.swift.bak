@@ -118,11 +118,6 @@ private struct SmallFamilyView: View {
                         .foregroundStyle(LAColors.keyline(for: snapshot))
                 }
 
-                // TEMPORARY DEBUG -- remove after diagnosing color issue
-                Text("DBG \(LAAppGroupSettings.thresholdsMgdl().low, specifier: "%.0f")/\(LAAppGroupSettings.thresholdsMgdl().target, specifier: "%.0f")/\(LAAppGroupSettings.thresholdsMgdl().high, specifier: "%.0f")")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.yellow)
-
                 Text("\(LAFormat.delta(snapshot)) \(snapshot.unit.displayName)")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .monospacedDigit()

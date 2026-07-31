@@ -2,6 +2,7 @@
 // DynamicGlucoseColor.swift
 
 import SwiftUI
+import UIKit
 
 func dynamicGlucoseColor(glucoseValue: Double, low: Double, target: Double, high: Double) -> Color {
     let redHue: CGFloat = 0.0 / 360.0
@@ -20,5 +21,5 @@ func dynamicGlucoseColor(glucoseValue: Double, low: Double, target: Double, high
         let ratio = CGFloat((glucoseValue - target) / (high - target))
         hue = greenHue + ratio * (purpleHue - greenHue)
     }
-    return Color(hue: hue, saturation: 0.6, brightness: 0.9)
+    return Color(uiColor: UIColor(hue: hue, saturation: 0.6, brightness: 0.9, alpha: 1.0))
 }

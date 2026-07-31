@@ -256,14 +256,8 @@ final class BGChartModel: ObservableObject {
         return finalMessage.isEmpty ? nil : finalMessage
     }
 
-    private func colorFor(_ sgv: Int, thresholds: (low: Double, high: Double)) -> Color {
-        if Double(sgv) >= thresholds.high {
-            return .yellow
-        } else if Double(sgv) <= thresholds.low {
-            return .red
-        } else {
-            return .green
-        }
+    private func colorFor(_ sgv: Int, thresholds: (low: Double, high: Double, target: Double)) -> Color {
+        dynamicGlucoseColor(glucoseValue: Double(sgv), low: thresholds.low, target: thresholds.target, high: thresholds.high)
     }
 
     /// Groups consecutive same-colored readings into line runs (see BGRun).

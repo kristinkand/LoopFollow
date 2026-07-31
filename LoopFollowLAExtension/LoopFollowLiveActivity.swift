@@ -214,8 +214,10 @@ private struct LockScreenLiveActivityView: View {
                         .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
                 }
-                .frame(minWidth: 150, maxWidth: 170, alignment: .leading)
+                .frame(minWidth: 130, maxWidth: 150, alignment: .leading)
                 .layoutPriority(2)
+
+                SlotView(option: .iob, snapshot: s)
 
                 LAHistoryGraphView(history: s.history)
                     .frame(maxWidth: .infinity)

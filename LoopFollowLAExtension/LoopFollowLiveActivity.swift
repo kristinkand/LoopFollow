@@ -215,7 +215,7 @@ private struct LockScreenLiveActivityView: View {
                         .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
                 }
-                .frame(minWidth: 160, maxWidth: 184, alignment: .leading)
+                .frame(minWidth: 150, maxWidth: 170, alignment: .leading)
                 .layoutPriority(2)
 
                 Rectangle()
@@ -224,17 +224,15 @@ private struct LockScreenLiveActivityView: View {
                     .padding(.vertical, 8)
 
                 LAHistoryGraphView(history: s.history)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .frame(height: 44)
-            }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 60)
 
-            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.20))
+                    .frame(width: 1)
+                    .padding(.vertical, 8)
+
                 SlotView(option: slotConfig[0], snapshot: s)
-                SlotView(option: slotConfig[1], snapshot: s)
-            }
-            HStack(spacing: 12) {
-                SlotView(option: slotConfig[2], snapshot: s)
-                SlotView(option: slotConfig[3], snapshot: s)
             }
 
             ActiveAdjustmentsView(snapshot: s)

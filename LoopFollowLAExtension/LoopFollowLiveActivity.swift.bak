@@ -804,7 +804,7 @@ private struct LAHistoryGraphView: View {
                     }
                     .stroke(
                         dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high),
-                        style: StrokeStyle(lineWidth: 24, lineCap: .round, lineJoin: .round)
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
                     )
                 }
             }

@@ -789,21 +789,21 @@ private struct LAHistoryGraphView: View {
             let maxValue = Double(history.map(\.v).max() ?? 1)
             let valueRange = max(maxValue - minValue, 1)
 
-            GeometryReader { geo in
-                ForEach(Array(zip(history.indices.dropLast(), zip(history, history.dropFirst()))), id: \.0) { _, pair in
-                    let (a, b) = pair
+            Canvas { context, size in
+                for (a, b) in zip(history, history.dropFirst()) {
                     let midValue = (Double(a.v) + Double(b.v)) / 2
-                    let x1 = geo.size.width * CGFloat((a.d - minDate) / dateRange)
-                    let y1 = geo.size.height * (1 - CGFloat((Double(a.v) - minValue) / valueRange))
-                    let x2 = geo.size.width * CGFloat((b.d - minDate) / dateRange)
-                    let y2 = geo.size.height * (1 - CGFloat((Double(b.v) - minValue) / valueRange))
+                    let x1 = size.width * CGFloat((a.d - minDate) / dateRange)
+                    let y1 = size.height * (1 - CGFloat((Double(a.v) - minValue) / valueRange))
+                    let x2 = size.width * CGFloat((b.d - minDate) / dateRange)
+                    let y2 = size.height * (1 - CGFloat((Double(b.v) - minValue) / valueRange))
 
-                    Path { path in
-                        path.move(to: CGPoint(x: x1, y: y1))
-                        path.addLine(to: CGPoint(x: x2, y: y2))
-                    }
-                    .stroke(
-                        dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high),
+                    var segment = Path()
+                    segment.move(to: CGPoint(x: x1, y: y1))
+                    segment.addLine(to: CGPoint(x: x2, y: y2))
+
+                    context.stroke(
+                        segment,
+                        with: .color(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high)),
                         style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
                     )
                 }

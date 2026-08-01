@@ -218,7 +218,7 @@ private struct LockScreenLiveActivityView: View {
 
                 LAHistoryGraphView(history: s.history)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 60)
+                    .frame(height: 72)
             }
 
             ActiveAdjustmentsView(snapshot: s)
@@ -795,7 +795,7 @@ private struct LAHistoryGraphView: View {
                         y: .value("BG", b.v)
                     )
                     .foregroundStyle(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high))
-                    .lineStyle(StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
                 }
             }
             .chartXAxis(.hidden)

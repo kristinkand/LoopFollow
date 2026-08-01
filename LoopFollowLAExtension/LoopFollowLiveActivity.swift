@@ -795,7 +795,7 @@ private struct LAHistoryGraphView: View {
                         y: .value("BG", b.v)
                     )
                     .foregroundStyle(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high))
-                    .lineStyle(StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
                 }
             }
             .chartXAxis(.hidden)

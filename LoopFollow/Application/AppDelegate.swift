@@ -65,12 +65,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Ensure VolumeButtonHandler is initialized so it can receive alarm notifications
         _ = VolumeButtonHandler.shared
 
+        WatchConnectivityManager.shared.activate()
+
         // Register for remote notifications
         DispatchQueue.main.async {
             UIApplication.shared.registerForRemoteNotifications()
         }
 
         BackgroundRefreshManager.shared.register()
+
+        // Detect Before-First-Unlock launch. isProtectedDataAvailable returns false
+        // for ANY locked-screen background launch, not only post-reboot. Standard
+        // UserDefaults use NSFileProtectionCompleteUntilFirstUserAuthentication —
+        // they stay readable after the first unlock even when the screen is locked.
+        // True BFU (boot before first unlock) is the only case where UserDefaults
+        // is actually inaccessible; in that state every StorageValue reads as its
+        // default — including migrationStep, which is always ≥ 1 for existing users.
+        // Guard against false positives by checking that migrationStep is still 0
+        // (its default), meaning the real value couldn't be read from disk.
+        let protectedDataUnavailable = !UIApplication.shared.isProtectedDataAvailable
+        let bfu = protectedDataUnavailable && Storage.shared.migrationStep.value == 0
+        Storage.shared.needsBFUReload = bfu
+        LogManager.shared.log(category: .general, message: "BFU check: isProtectedDataAvailable=\(!protectedDataUnavailable), migrationStep=\(Storage.shared.migrationStep.value), needsBFUReload=\(bfu)")
 
         // Telemetry mutates rolling history (coldLaunches7d), so defer past a BFU
         // window — poisoned defaults would discard real history. Runs synchronously

@@ -2,7 +2,6 @@
 // LoopFollowLiveActivity.swift
 
 import ActivityKit
-import Charts
 import SwiftUI
 import WidgetKit
 
@@ -783,26 +782,31 @@ private struct LAHistoryGraphView: View {
             Color.clear
         } else {
             let t = LAAppGroupSettings.thresholdsMgdl()
-            Chart {
-                ForEach(Array(zip(history, history.dropFirst())), id: \.0.d) { a, b in
+            let minDate = history.first!.d
+            let maxDate = history.last!.d
+            let dateRange = max(maxDate - minDate, 1)
+            let minValue = Double(history.map(\.v).min() ?? 0)
+            let maxValue = Double(history.map(\.v).max() ?? 1)
+            let valueRange = max(maxValue - minValue, 1)
+
+            GeometryReader { geo in
+                ForEach(Array(zip(history.indices.dropLast(), zip(history, history.dropFirst()))), id: \.0) { _, pair in
+                    let (a, b) = pair
                     let midValue = (Double(a.v) + Double(b.v)) / 2
-                    LineMark(
-                        x: .value("Time", Date(timeIntervalSince1970: a.d)),
-                        y: .value("BG", a.v)
+                    let x1 = geo.size.width * CGFloat((a.d - minDate) / dateRange)
+                    let y1 = geo.size.height * (1 - CGFloat((Double(a.v) - minValue) / valueRange))
+                    let x2 = geo.size.width * CGFloat((b.d - minDate) / dateRange)
+                    let y2 = geo.size.height * (1 - CGFloat((Double(b.v) - minValue) / valueRange))
+
+                    Path { path in
+                        path.move(to: CGPoint(x: x1, y: y1))
+                        path.addLine(to: CGPoint(x: x2, y: y2))
+                    }
+                    .stroke(
+                        dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high),
+                        style: StrokeStyle(lineWidth: 24, lineCap: .round, lineJoin: .round)
                     )
-                    LineMark(
-                        x: .value("Time", Date(timeIntervalSince1970: b.d)),
-                        y: .value("BG", b.v)
-                    )
-                    .foregroundStyle(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high))
-                    .lineStyle(StrokeStyle(lineWidth: 24, lineCap: .round, lineJoin: .round))
                 }
-            }
-            .chartXAxis(.hidden)
-            .chartYAxis(.hidden)
-            .chartLegend(.hidden)
-            .chartPlotStyle { plot in
-                plot.background(.clear)
             }
         }
     }

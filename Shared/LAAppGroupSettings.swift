@@ -153,6 +153,7 @@ enum LAAppGroupSettings {
     private enum Keys {
         static let lowLineMgdl = "la.lowLine.mgdl"
         static let highLineMgdl = "la.highLine.mgdl"
+        static let targetLineMgdl = "la.targetLine.mgdl"
         static let slots = "la.slots"
         static let smallWidgetSlot = "la.smallWidgetSlot"
         static let displayName = "la.displayName"
@@ -166,17 +167,23 @@ enum LAAppGroupSettings {
 
     // MARK: - Thresholds (Write)
 
-    static func setThresholds(lowMgdl: Double, highMgdl: Double) {
+    static func setThresholds(lowMgdl: Double, highMgdl: Double, targetMgdl: Double) {
         defaults?.set(lowMgdl, forKey: Keys.lowLineMgdl)
         defaults?.set(highMgdl, forKey: Keys.highLineMgdl)
+        defaults?.set(targetMgdl, forKey: Keys.targetLineMgdl)
     }
 
     // MARK: - Thresholds (Read)
 
-    static func thresholdsMgdl(fallbackLow: Double = 70, fallbackHigh: Double = 180) -> (low: Double, high: Double) {
+    static func thresholdsMgdl(
+        fallbackLow: Double = 70,
+        fallbackHigh: Double = 180,
+        fallbackTarget: Double = 100
+    ) -> (low: Double, high: Double, target: Double) {
         let low = defaults?.object(forKey: Keys.lowLineMgdl) as? Double ?? fallbackLow
         let high = defaults?.object(forKey: Keys.highLineMgdl) as? Double ?? fallbackHigh
-        return (low, high)
+        let target = defaults?.object(forKey: Keys.targetLineMgdl) as? Double ?? fallbackTarget
+        return (low, high, target)
     }
 
     // MARK: - Slot configuration (Write)

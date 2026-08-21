@@ -31,6 +31,11 @@ class BackgroundTask {
     /// `AVAudioSession.ErrorCode.cannotInterruptOthers` (560557684).
     private let postInterruptionDelay: TimeInterval = 0.5
 
+    /// Window after an interruption begins in which a matching `.ended` supersedes
+    /// the recovery. Longer than `postInterruptionDelay` so a blip's own restart
+    /// lands first; short enough that a real claim loss is addressed promptly.
+    private let interruptionSettleDelay: TimeInterval = 1.0
+
     private var recoveryWorkItem: DispatchWorkItem?
     private var assertionID: UIBackgroundTaskIdentifier = .invalid
 
@@ -108,11 +113,12 @@ class BackgroundTask {
                 message: "[LA] Silent audio session interrupted (began), reason=\(describe(reason)), otherAudioPlaying=\(AVAudioSession.sharedInstance().isOtherAudioPlaying)"
             )
             // iOS delivers `.ended` only if the app is still running, and the lost
-            // audio claim means suspension is imminent. Start recovering now under
-            // an assertion, and arm a background refresh as the outer safety net
-            // for interrupters that outlast the assertion.
-            onMain { self.recover(after: 0, reason: "interruption began", startedByInterruption: true) }
-            BackgroundRefreshManager.shared.scheduleImmediateRefresh()
+            // audio claim means suspension is imminent, so recovery cannot wait for
+            // it. The delay is a supersede window: a brief interrupter's `.ended`
+            // arrives well inside it and cancels this work, so momentary blips stay
+            // quiet. Work that does run is therefore a reliable signal that the
+            // claim is really gone, whatever `player.isPlaying` reports.
+            onMain { self.recover(after: self.interruptionSettleDelay, reason: "interruption began", startedByInterruption: true) }
 
         case .ended:
             if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
@@ -157,11 +163,12 @@ class BackgroundTask {
             lastFailureCode = nil
         }
 
-        if player.isPlaying {
-            finishRecovery(success: true)
-            return
-        }
-
+        // No `player.isPlaying` shortcut: it reports true for a while after the
+        // session is taken, which would skip recovery and the assertion with it.
+        // Reattempting against a player that really is playing is harmless —
+        // `playAudio` activates the session before touching `player`, so a failed
+        // attempt leaves a working one untouched.
+        //
         // The assertion is taken before the delay so the first attempt is covered too.
         beginAssertion()
 
@@ -181,6 +188,12 @@ class BackgroundTask {
 
     private func attempt(_ number: Int, of reason: String) {
         attemptsMade = number
+        if startedByInterruption, number == 1 {
+            // Reached only when the settle window elapsed without an `.ended`, so the
+            // interrupter is holding the session and the app may be suspended before
+            // the ladder finishes. Arm the outer safety net now, not per interruption.
+            BackgroundRefreshManager.shared.scheduleImmediateRefresh()
+        }
         if playAudio(attempt: number, reason: reason) {
             finishRecovery(success: true)
             return
@@ -295,9 +308,9 @@ class BackgroundTask {
                 message: "Silent audio recovery assertion expired after \(self.attemptsMade) attempts over \(self.elapsedDescription()); the app is about to be suspended without an audio claim"
             )
             self.lastSequenceGaveUp = true
-            if !self.player.isPlaying {
-                BackgroundRefreshManager.shared.scheduleImmediateRefresh()
-            }
+            // A success ends the assertion, so reaching expiration means the claim was
+            // never re-established — arm the net without consulting `player.isPlaying`.
+            BackgroundRefreshManager.shared.scheduleImmediateRefresh()
             self.cancelRecovery()
         }
     }

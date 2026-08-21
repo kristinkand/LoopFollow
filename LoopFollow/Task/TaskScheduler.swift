@@ -28,6 +28,14 @@ class TaskScheduler {
     private var tasks: [TaskID: ScheduledTask] = [:]
     private var currentTimer: DispatchSourceTimer?
 
+    /// When tasks last fired. `minAgoUpdate` reschedules itself at most 60s out, so
+    /// with runtime this advances at least once a minute; a larger jump means the
+    /// process was suspended and is the window the background alerts fire in.
+    private var lastFireDate: Date?
+
+    /// Above normal tick jitter, below the 6-minute first background alert.
+    private let runtimeGapThreshold: TimeInterval = 120
+
     private init() {}
 
     // MARK: - Public API
@@ -90,6 +98,7 @@ class TaskScheduler {
         BackgroundAlertManager.shared.scheduleBackgroundAlert()
 
         let now = Date()
+        noteRuntimeGap(at: now)
 
         for taskID in TaskID.allCases {
             guard let task = tasks[taskID], task.nextRun <= now else {
@@ -106,6 +115,28 @@ class TaskScheduler {
                 task.action()
             }
         }
+    }
+
+    /// Records one line per lost-runtime window, so the length of a background stall
+    /// is readable directly instead of having to be inferred from timestamp gaps.
+    private func noteRuntimeGap(at now: Date) {
+        defer { lastFireDate = now }
+        guard let last = lastFireDate else { return }
+        let gap = now.timeIntervalSince(last)
+        guard gap >= runtimeGapThreshold else { return }
+        // Silent Tune is the only mode whose invariant is continuous runtime, which is
+        // what this measures. `.none` is meant to be suspended, and the Bluetooth modes
+        // tick at heartbeat cadence with their own delayed-heartbeat reporting — for
+        // both, a gap is normal and the alerts below would misreport.
+        guard Storage.shared.backgroundRefreshType.value == .silentTune else { return }
+        let alerts = BackgroundAlertDuration.allCases
+            .filter { gap >= $0.rawValue }
+            .map { "\(Int($0.rawValue / 60))" }
+        let fired = alerts.isEmpty ? "none" : alerts.joined(separator: "/") + " min"
+        LogManager.shared.log(
+            category: .taskScheduler,
+            message: "Regained runtime after \(Int(gap))s with no scheduler tick; background alerts fired: \(fired)"
+        )
     }
 
     private func formatTime(_ date: Date) -> String {

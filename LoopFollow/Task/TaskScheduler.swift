@@ -33,8 +33,19 @@ class TaskScheduler {
     /// process was suspended and is the window the background alerts fire in.
     private var lastFireDate: Date?
 
+    /// Boot-relative counterpart to `lastFireDate`. It includes time asleep and cannot
+    /// be moved by a clock correction, so it measures the gap even when the wall clock
+    /// steps — and the difference between the two says a step happened.
+    private var lastFireUptime: UInt64?
+
     /// Above normal tick jitter, below the 6-minute first background alert.
     private let runtimeGapThreshold: TimeInterval = 120
+
+    /// Queue-confined park tracking. A normal park clears within milliseconds, so a
+    /// survivor at this age is wedged or was suspended mid-park.
+    private var parkedSince: Date?
+    private var parkedReporter: DispatchWorkItem?
+    private let parkedReportDelay: TimeInterval = 5
 
     private init() {}
 
@@ -80,6 +91,12 @@ class TaskScheduler {
             return
         }
 
+        if earliestTask.nextRun == .distantFuture {
+            noteTimerParked()
+        } else {
+            clearTimerParked()
+        }
+
         let interval = earliestTask.nextRun.timeIntervalSinceNow
         let safeInterval = max(interval, 0)
 
@@ -117,12 +134,46 @@ class TaskScheduler {
         }
     }
 
+    /// `fireOverdueTasks` parks a task at `.distantFuture` and its action reschedules
+    /// it asynchronously, so every task being parked at once is normal for the
+    /// milliseconds in between. Only a park that outlives that is interesting: it means
+    /// nothing is left to wake the timer. Reported by duration so the routine case
+    /// stays silent.
+    private func noteTimerParked() {
+        guard parkedSince == nil else { return }
+        let since = Date()
+        parkedSince = since
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.parkedSince == since else { return }
+            LogManager.shared.log(
+                category: .taskScheduler,
+                message: "Timer still parked after \(Int(Date().timeIntervalSince(since)))s: every task is awaiting its action to reschedule it"
+            )
+        }
+        parkedReporter = work
+        queue.asyncAfter(deadline: .now() + parkedReportDelay, execute: work)
+    }
+
+    private func clearTimerParked() {
+        parkedReporter?.cancel()
+        parkedReporter = nil
+        parkedSince = nil
+    }
+
     /// Records one line per lost-runtime window, so the length of a background stall
     /// is readable directly instead of having to be inferred from timestamp gaps.
     private func noteRuntimeGap(at now: Date) {
-        defer { lastFireDate = now }
-        guard let last = lastFireDate else { return }
-        let gap = now.timeIntervalSince(last)
+        // CLOCK_MONOTONIC keeps counting while the device sleeps, unlike
+        // CLOCK_UPTIME_RAW, so it measures a suspension rather than skipping it.
+        let uptime = clock_gettime_nsec_np(CLOCK_MONOTONIC)
+        defer {
+            lastFireDate = now
+            lastFireUptime = uptime
+        }
+        guard let last = lastFireDate, let lastUptime = lastFireUptime else { return }
+        // Boot time is authoritative: a wall-clock correction must not hide a stall.
+        let gap = Double(uptime &- lastUptime) / 1_000_000_000
+        let wallGap = now.timeIntervalSince(last)
         guard gap >= runtimeGapThreshold else { return }
         // Silent Tune is the only mode whose invariant is continuous runtime, which is
         // what this measures. `.none` is meant to be suspended, and the Bluetooth modes
@@ -133,10 +184,11 @@ class TaskScheduler {
             .filter { gap >= $0.rawValue }
             .map { "\(Int($0.rawValue / 60))" }
         let fired = alerts.isEmpty ? "none" : alerts.joined(separator: "/") + " min"
-        LogManager.shared.log(
-            category: .taskScheduler,
-            message: "Regained runtime after \(Int(gap))s with no scheduler tick; background alerts fired: \(fired)"
-        )
+        var message = "Regained runtime after \(Int(gap))s with no scheduler tick; background alerts fired: \(fired)"
+        if abs(wallGap - gap) >= 5 {
+            message += "; wall clock moved \(Int(wallGap - gap))s relative to boot time"
+        }
+        LogManager.shared.log(category: .taskScheduler, message: message)
     }
 
     private func formatTime(_ date: Date) -> String {

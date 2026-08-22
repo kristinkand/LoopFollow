@@ -3,6 +3,7 @@
 
 import BackgroundTasks
 import Foundation
+import UIKit
 
 class BackgroundRefreshManager {
     static let shared = BackgroundRefreshManager()
@@ -83,6 +84,8 @@ class BackgroundRefreshManager {
             // absence of a follow-up line.
             guard !backgroundTask.isPlaying else {
                 LogManager.shared.log(category: .taskScheduler, message: "audio alive, no action needed")
+                self.armBackgroundAlerts()
+                TaskScheduler.shared.checkTasksNow()
                 complete(true)
                 return
             }
@@ -96,9 +99,27 @@ class BackgroundRefreshManager {
                     category: .taskScheduler,
                     message: success ? "audio restart succeeded" : "audio restart failed"
                 )
+                // Only on success: a failed restart means suspension is imminent, and
+                // dispatching fetches that cannot finish helps nothing.
+                if success {
+                    self.armBackgroundAlerts()
+                    TaskScheduler.shared.checkTasksNow()
+                }
                 complete(success)
             }
         }
+    }
+
+    /// Clears any delivered "App inactive" notification and re-arms the 6/12/18 minute
+    /// alerts from this moment. A background task only runs while backgrounded, so the
+    /// alerts belong armed here — and a process launched into the background never ran
+    /// `appMovedToBackground`, so nothing else would have armed them at all.
+    private func armBackgroundAlerts() {
+        // The task fires while backgrounded, but its work lands on the main queue and
+        // the user may have opened the app in between. Arming then would put an "App
+        // inactive" notification on screen while they are looking at the app.
+        guard UIApplication.shared.applicationState == .background else { return }
+        BackgroundAlertManager.shared.startBackgroundAlert()
     }
 
     /// Requests the routine health check, leaving an existing pending request alone

@@ -65,13 +65,25 @@ class BackgroundTask {
     // MARK: - Methods
 
     func startBackgroundTask() {
-        NotificationCenter.default.removeObserver(self, name: AVAudioSession.interruptionNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(interruptedAudio), name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance())
+        attachObservers()
         onMain { self.recover(after: 0, reason: "start") }
     }
 
+    /// Idempotent, and called from `restartAudio` too: a process launched into the
+    /// background by `BGAppRefreshTask` never sees a backgrounding transition, so
+    /// without this it would run the keep-alive with nothing watching the session.
+    private func attachObservers() {
+        removeObservers()
+        NotificationCenter.default.addObserver(self, selector: #selector(interruptedAudio), name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance())
+        // A route disappearing pauses the player without any interruption notification,
+        // and a media services reset invalidates the session and player outright —
+        // neither is observable through `interruptionNotification`.
+        NotificationCenter.default.addObserver(self, selector: #selector(audioRouteChanged), name: AVAudioSession.routeChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(mediaServicesWereReset), name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+    }
+
     func stopBackgroundTask() {
-        NotificationCenter.default.removeObserver(self, name: AVAudioSession.interruptionNotification, object: nil)
+        removeObservers()
         onMain {
             self.cancelRecovery()
             self.player.stop()
@@ -89,9 +101,77 @@ class BackgroundTask {
     /// audio claim that made them necessary.
     /// - Parameter completion: Called on the main queue with the final state.
     func restartAudio(reason: String, completion: ((Bool) -> Void)? = nil) {
+        attachObservers()
         onMain {
             self.player.stop()
             self.recover(after: 0, reason: reason, completion: completion)
+        }
+    }
+
+    private func removeObservers() {
+        NotificationCenter.default.removeObserver(self, name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: AVAudioSession.routeChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+    }
+
+    // MARK: - Route and media services handling
+
+    @objc private func audioRouteChanged(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
+        else { return }
+
+        let previous = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
+        let route = "reason=\(describe(reason)) from=\(portTypes(previous)) to=\(portTypes(AVAudioSession.sharedInstance().currentRoute))"
+
+        switch reason {
+        case .oldDeviceUnavailable, .newDeviceAvailable:
+            LogManager.shared.log(category: .general, message: "[LA] Audio route changed, restarting silent audio: \(route)")
+            // Same settle delay as an interruption, for a different reason: CarPlay and
+            // Bluetooth transitions emit a burst of route changes, and each supersedes
+            // the last so the ladder runs once against the settled route.
+            onMain { self.recover(after: self.interruptionSettleDelay, reason: "route change") }
+
+        case .categoryChange:
+            // Never recover here. `playAudio` sets the category itself, so recovering
+            // would retrigger this notification indefinitely, and an alarm takes over
+            // the session by changing category — reactivating with `.mixWithOthers`
+            // mid-alert would strip the alarm's dominance.
+            LogManager.shared.log(category: .general, message: "[LA] Audio route changed, ignoring: \(route)", isDebug: true)
+
+        default:
+            // Logged but not acted on: no evidence yet ties these to a lost claim, and
+            // a log line is how the next one earns a recovery.
+            LogManager.shared.log(category: .general, message: "[LA] Audio route changed, no action: \(route)")
+        }
+    }
+
+    @objc private func mediaServicesWereReset(_: Notification) {
+        LogManager.shared.log(category: .general, message: "[LA] Media services were reset — session and player are invalid, rebuilding")
+        // `playAudio` reconfigures the category, reactivates, and creates a fresh
+        // player, which is the recovery Apple prescribes for a reset.
+        onMain { self.recover(after: self.interruptionSettleDelay, reason: "media services reset") }
+    }
+
+    /// Port types only — `portName` carries the user's accessory name, which must not
+    /// reach a shared log.
+    private func portTypes(_ route: AVAudioSessionRouteDescription?) -> String {
+        guard let route, !route.outputs.isEmpty else { return "none" }
+        return route.outputs.map { $0.portType.rawValue }.joined(separator: "+")
+    }
+
+    private func describe(_ reason: AVAudioSession.RouteChangeReason) -> String {
+        switch reason {
+        case .newDeviceAvailable: "newDeviceAvailable"
+        case .oldDeviceUnavailable: "oldDeviceUnavailable"
+        case .categoryChange: "categoryChange"
+        case .override: "override"
+        case .wakeFromSleep: "wakeFromSleep"
+        case .noSuitableRouteForCategory: "noSuitableRouteForCategory"
+        case .routeConfigurationChange: "routeConfigurationChange"
+        case .unknown: "unknown"
+        @unknown default: "other"
         }
     }
 

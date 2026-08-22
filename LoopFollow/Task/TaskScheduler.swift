@@ -33,9 +33,8 @@ class TaskScheduler {
     /// process was suspended and is the window the background alerts fire in.
     private var lastFireDate: Date?
 
-    /// Boot-relative counterpart to `lastFireDate`. It includes time asleep and cannot
-    /// be moved by a clock correction, so it measures the gap even when the wall clock
-    /// steps — and the difference between the two says a step happened.
+    /// Counterpart to `lastFireDate` that includes time asleep and cannot be moved by
+    /// a clock correction. The difference between the two measures a clock step.
     private var lastFireUptime: UInt64?
 
     /// Above normal tick jitter, below the 6-minute first background alert.
@@ -136,9 +135,8 @@ class TaskScheduler {
 
     /// `fireOverdueTasks` parks a task at `.distantFuture` and its action reschedules
     /// it asynchronously, so every task being parked at once is normal for the
-    /// milliseconds in between. Only a park that outlives that is interesting: it means
-    /// nothing is left to wake the timer. Reported by duration so the routine case
-    /// stays silent.
+    /// milliseconds in between. A park outliving that leaves nothing to wake the timer,
+    /// so it is reported by duration and the routine case stays silent.
     private func noteTimerParked() {
         guard parkedSince == nil else { return }
         let since = Date()
@@ -160,11 +158,11 @@ class TaskScheduler {
         parkedSince = nil
     }
 
-    /// Records one line per lost-runtime window, so the length of a background stall
-    /// is readable directly instead of having to be inferred from timestamp gaps.
+    /// Records one line per lost-runtime window, giving the length of a background
+    /// stall directly.
     private func noteRuntimeGap(at now: Date) {
-        // CLOCK_MONOTONIC keeps counting while the device sleeps, unlike
-        // CLOCK_UPTIME_RAW, so it measures a suspension rather than skipping it.
+        // CLOCK_MONOTONIC keeps counting while the device sleeps, so it measures a
+        // suspension.
         let uptime = clock_gettime_nsec_np(CLOCK_MONOTONIC)
         defer {
             lastFireDate = now
@@ -176,9 +174,8 @@ class TaskScheduler {
         let wallGap = now.timeIntervalSince(last)
         guard gap >= runtimeGapThreshold else { return }
         // Silent Tune is the only mode whose invariant is continuous runtime, which is
-        // what this measures. `.none` is meant to be suspended, and the Bluetooth modes
-        // tick at heartbeat cadence with their own delayed-heartbeat reporting — for
-        // both, a gap is normal and the alerts below would misreport.
+        // what this measures. `.none` is meant to be suspended and the Bluetooth modes
+        // tick at heartbeat cadence, so for both a gap is normal.
         guard Storage.shared.backgroundRefreshType.value == .silentTune else { return }
         let alerts = BackgroundAlertDuration.allCases
             .filter { gap >= $0.rawValue }

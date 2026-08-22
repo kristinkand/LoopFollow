@@ -41,7 +41,7 @@ class BackgroundTask {
 
     /// Callers waiting on the outcome. A caller holding a `BGAppRefreshTask` open
     /// must always hear back so it can complete the task, so a sequence that
-    /// supersedes another inherits its waiters rather than failing them.
+    /// supersedes another inherits its waiters.
     private var pendingCompletions: [(Bool) -> Void] = []
 
     /// Per-sequence diagnostics: how long recovery has been running, how many
@@ -52,8 +52,7 @@ class BackgroundTask {
     private var lastFailureCode: Int?
 
     /// Set when a sequence runs out of attempts, so the eventual recovery is reported
-    /// at full level however it arrives — otherwise the line proving the keep-alive
-    /// came back is the one line missing from a log of a bad night.
+    /// at full level however it arrives.
     private var lastSequenceGaveUp = false
 
     /// True while the active sequence was started by an interruption beginning.
@@ -69,9 +68,9 @@ class BackgroundTask {
         onMain { self.recover(after: 0, reason: "start") }
     }
 
-    /// Idempotent, and called from `restartAudio` too: a process launched into the
-    /// background by `BGAppRefreshTask` never sees a backgrounding transition, so
-    /// without this it would run the keep-alive with nothing watching the session.
+    /// Idempotent. A process launched into the background by `BGAppRefreshTask` never
+    /// sees a backgrounding transition, so the keep-alive attaches these wherever it
+    /// starts.
     private func attachObservers() {
         removeObservers()
         NotificationCenter.default.addObserver(self, selector: #selector(interruptedAudio), name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance())
@@ -87,9 +86,8 @@ class BackgroundTask {
         onMain {
             self.cancelRecovery()
             self.player.stop()
-            // Reached only from the foreground transition, so an unresolved give-up is
-            // now moot: the user has the app open and the next backgrounding is a
-            // clean start rather than a recovery to confirm.
+            // Reached only from the foreground transition: with the app open, the
+            // next backgrounding is a clean start.
             self.lastSequenceGaveUp = false
             LogManager.shared.log(category: .general, message: "Silent audio stopped", isDebug: true)
         }
@@ -128,21 +126,17 @@ class BackgroundTask {
         switch reason {
         case .oldDeviceUnavailable, .newDeviceAvailable:
             LogManager.shared.log(category: .general, message: "[LA] Audio route changed, restarting silent audio: \(route)")
-            // Same settle delay as an interruption, for a different reason: CarPlay and
-            // Bluetooth transitions emit a burst of route changes, and each supersedes
-            // the last so the ladder runs once against the settled route.
+            // CarPlay and Bluetooth transitions emit a burst of route changes; each
+            // supersedes the last, so the ladder runs once against the settled route.
             onMain { self.recover(after: self.interruptionSettleDelay, reason: "route change") }
 
         case .categoryChange:
-            // Never recover here. `playAudio` sets the category itself, so recovering
-            // would retrigger this notification indefinitely, and an alarm takes over
-            // the session by changing category — reactivating with `.mixWithOthers`
-            // mid-alert would strip the alarm's dominance.
+            // `playAudio` sets the category itself, and an alarm takes over the
+            // session the same way. Both make this reason unsafe to act on.
             LogManager.shared.log(category: .general, message: "[LA] Audio route changed, ignoring: \(route)", isDebug: true)
 
         default:
-            // Logged but not acted on: no evidence yet ties these to a lost claim, and
-            // a log line is how the next one earns a recovery.
+            // Recorded for diagnosis without acting.
             LogManager.shared.log(category: .general, message: "[LA] Audio route changed, no action: \(route)")
         }
     }
@@ -228,9 +222,7 @@ class BackgroundTask {
 
     /// Runs one bounded recovery sequence, superseding any sequence already in flight.
     private func recover(after delay: TimeInterval, reason: String, startedByInterruption: Bool = false, completion: ((Bool) -> Void)? = nil) {
-        // The in-flight sequence is replaced, not abandoned: its waiters inherit this
-        // sequence's outcome, so a `.ended` arriving mid-ladder doesn't report failure
-        // for a restart that is about to succeed.
+        // Waiters from the in-flight sequence inherit this sequence's outcome.
         recoveryWorkItem?.cancel()
         recoveryWorkItem = nil
         if let completion {
@@ -243,11 +235,10 @@ class BackgroundTask {
             lastFailureCode = nil
         }
 
-        // No `player.isPlaying` shortcut: it reports true for a while after the
-        // session is taken, which would skip recovery and the assertion with it.
-        // Reattempting against a player that really is playing is harmless —
-        // `playAudio` activates the session before touching `player`, so a failed
-        // attempt leaves a working one untouched.
+        // `player.isPlaying` reports true for a while after the session is taken, so
+        // recovery runs unconditionally. Reattempting against a playing player is
+        // harmless: `playAudio` activates the session before touching `player`, leaving
+        // a working one untouched when an attempt fails.
         //
         // The assertion is taken before the delay so the first attempt is covered too.
         beginAssertion()
@@ -270,8 +261,8 @@ class BackgroundTask {
         attemptsMade = number
         if startedByInterruption, number == 1 {
             // Reached only when the settle window elapsed without an `.ended`, so the
-            // interrupter is holding the session and the app may be suspended before
-            // the ladder finishes. Arm the outer safety net now, not per interruption.
+            // interrupter holds the session and the app may be suspended before the
+            // ladder finishes.
             BackgroundRefreshManager.shared.scheduleImmediateRefresh()
         }
         if playAudio(attempt: number, reason: reason) {
@@ -324,11 +315,9 @@ class BackgroundTask {
                 return false
             }
             if attempt > 1 || lastFailureCode != nil || lastSequenceGaveUp {
-                // Any recovery that follows a logged failure has to report itself, or
-                // the log shows the failure and never says whether it resolved.
-                // `lastFailureCode` survives a supersede, so the commonest shape —
-                // `.began` fails, `.ended` succeeds on its first attempt — is covered,
-                // and the elapsed figure spans the whole window.
+                // A recovery following a logged failure reports itself, so the log
+                // always says whether the failure resolved. `lastFailureCode` survives
+                // a supersede, so the elapsed figure spans the whole window.
                 LogManager.shared.log(category: .general, message: "Silent audio playing again after \(attempt) attempt(s) over \(elapsedDescription()) (\(reason))")
             } else {
                 LogManager.shared.log(category: .general, message: "Silent audio playing (\(reason))", isDebug: true)

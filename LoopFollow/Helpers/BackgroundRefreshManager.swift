@@ -79,10 +79,9 @@ class BackgroundRefreshManager {
                 complete(true)
                 return
             }
-            // Logged at full level: `.taskScheduler` debug lines are dropped before the
-            // file write, and without this the only trace of a healthy check is the
-            // absence of a follow-up line.
             guard !backgroundTask.isPlaying else {
+                // Full level: `.taskScheduler` debug lines are dropped before the file
+                // write, and a healthy check should leave a trace of its own.
                 LogManager.shared.log(category: .taskScheduler, message: "audio alive, no action needed")
                 self.armBackgroundAlerts()
                 TaskScheduler.shared.checkTasksNow()
@@ -111,28 +110,26 @@ class BackgroundRefreshManager {
     }
 
     /// Clears any delivered "App inactive" notification and re-arms the 6/12/18 minute
-    /// alerts from this moment. A background task only runs while backgrounded, so the
-    /// alerts belong armed here — and a process launched into the background never ran
-    /// `appMovedToBackground`, so nothing else would have armed them at all.
+    /// alerts from this moment. A process launched into the background never ran
+    /// `appMovedToBackground`, so this is the only place its alerts are armed.
     private func armBackgroundAlerts() {
         // The task fires while backgrounded, but its work lands on the main queue and
-        // the user may have opened the app in between. Arming then would put an "App
-        // inactive" notification on screen while they are looking at the app.
+        // the user may have opened the app in between. Alerts belong only to a
+        // backgrounded app.
         guard UIApplication.shared.applicationState == .background else { return }
         BackgroundAlertManager.shared.startBackgroundAlert()
     }
 
     /// Requests the routine health check, leaving an existing pending request alone
-    /// when it would run at least as soon. Every background transition calls this,
-    /// and unconditional resubmission would push the check further out each time.
+    /// when it would run at least as soon. Every background transition calls this, so
+    /// the earliest pending request is the one that survives.
     func scheduleRefresh() {
         let desired = Date(timeIntervalSinceNow: refreshInterval)
         BGTaskScheduler.shared.getPendingTaskRequests { [weak self] pending in
             guard let self else { return }
             self.queue.async {
-                // Category `.general`, not `.taskScheduler`: LogManager drops
-                // `.taskScheduler` debug lines before the file write, and these need to
-                // reach a user-submitted log when debug logging is on.
+                // Category `.general`: LogManager drops `.taskScheduler` debug lines
+                // before the file write, and these belong in a shared log.
                 guard !self.immediateRequested else {
                     LogManager.shared.log(category: .general, message: "Keeping the pending immediate refresh request", isDebug: true)
                     return

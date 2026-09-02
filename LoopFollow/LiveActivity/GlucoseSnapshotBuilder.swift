@@ -105,6 +105,11 @@ protocol CurrentGlucoseStateProviding {
 
     /// True when the Live Activity is within renewalWarning seconds of its deadline.
     var showRenewalOverlay: Bool { get }
+
+    // MARK: - History
+
+    /// Recent glucose history for the Lock Screen mini graph (last ~6 hours).
+    var history: [LAHistoryPoint] { get }
 }
 
 // MARK: - Builder
@@ -171,6 +176,7 @@ enum GlucoseSnapshotBuilder {
             iageInsertTime: provider.iageInsertTime,
             minBgMgdl: provider.minBgMgdl,
             maxBgMgdl: provider.maxBgMgdl,
+            history: provider.history,
             unit: preferredUnit,
             isNotLooping: provider.isNotLooping,
             showRenewalOverlay: provider.showRenewalOverlay,

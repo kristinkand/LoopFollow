@@ -62,15 +62,18 @@ final class UnitSettingsStore {
         }
     }
 
-    /// Returns the effective low/high thresholds (in mg/dL) for the current range mode.
-    func effectiveThresholds() -> (low: Double, high: Double) {
+    /// Returns the effective low/high/target thresholds (in mg/dL) for the current range mode.
+    /// Target is independent of range mode -- it's the center point for the dynamic
+    /// glucose color gradient (mirrors Trio's Target Glucose), adjustable in Settings.
+    func effectiveThresholds() -> (low: Double, high: Double, target: Double) {
+        let target = Storage.shared.targetLine.value
         switch timeInRangeMode {
         case .tir:
-            return (70.0, 180.0)
+            return (70.0, 180.0, target)
         case .titr:
-            return (70.0, 140.0)
+            return (70.0, 140.0, target)
         case .custom:
-            return (Storage.shared.lowLine.value, Storage.shared.highLine.value)
+            return (Storage.shared.lowLine.value, Storage.shared.highLine.value, target)
         }
     }
 

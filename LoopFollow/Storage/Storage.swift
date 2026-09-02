@@ -141,6 +141,8 @@ class Storage {
     var minBGScale = StorageValue<Double>(key: "minBGScale", defaultValue: 250.0)
     var lowLine = StorageValue<Double>(key: "lowLine", defaultValue: 70.0)
     var highLine = StorageValue<Double>(key: "highLine", defaultValue: 180.0)
+    var targetLine = StorageValue<Double>(key: "targetLine", defaultValue: 100.0)
+    var lastBgHistory = StorageValue<[LAHistoryPoint]>(key: "lastBgHistory", defaultValue: [])
     var downloadDays = StorageValue<Int>(key: "downloadDays", defaultValue: 1)
     var graphTimeZoneEnabled = StorageValue<Bool>(key: "graphTimeZoneEnabled", defaultValue: false)
     var graphTimeZoneIdentifier = StorageValue<String>(key: "graphTimeZoneIdentifier", defaultValue: TimeZone.current.identifier)

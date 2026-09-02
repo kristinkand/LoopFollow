@@ -879,6 +879,7 @@ enum TreatmentType: CaseIterable, Hashable {
     case tempBasal
     case override
     case tempTarget
+    case weekendProfile
 
     var displayName: String {
         switch self {
@@ -889,6 +890,7 @@ enum TreatmentType: CaseIterable, Hashable {
         case .tempBasal: return "Basal"
         case .override: return "Override"
         case .tempTarget: return "Temp Target"
+        case .weekendProfile: return "Weekend Profile"
         }
     }
 }
@@ -1289,18 +1291,28 @@ class TreatmentsViewModel: ObservableObject {
                     ?? (entry["reason"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
                     ?? ""
 
-                let subtitleParts = ["Override", durationMinutes > 0 ? "\(Int(durationMinutes))m" : nil].compactMap { $0 }
+                // Trio's Weekend Profile reuses the "Exercise" eventType so any Nightscout-based
+                // viewer that already understands Overrides picks it up for free, but tags its
+                // entries with a distinct `enteredBy` so it can still be told apart here -- shown
+                // with its own color/icon instead of blending in with a real Override, even though
+                // the title already reads as the profile's name either way (both come from `notes`).
+                let isWeekendProfile = (entry["enteredBy"] as? String) == "Trio Weekend Profile"
+
+                let subtitleParts = [
+                    isWeekendProfile ? "Weekend Profile" : "Override",
+                    durationMinutes > 0 ? "\(Int(durationMinutes))m" : nil
+                ].compactMap { $0 }
                 let subtitle = subtitleParts.joined(separator: " • ")
-                let title = reason.isEmpty ? "Temporary Override" : reason
+                let title = reason.isEmpty ? (isWeekendProfile ? "Weekend Profile" : "Temporary Override") : reason
 
                 let treatment = Treatment(
                     id: "\(nsId)-override",
-                    type: .override,
+                    type: isWeekendProfile ? .weekendProfile : .override,
                     date: timestamp,
                     title: title,
                     subtitle: subtitle,
-                    icon: "slider.horizontal.3",
-                    color: .purple,
+                    icon: isWeekendProfile ? "sun.max.fill" : "slider.horizontal.3",
+                    color: isWeekendProfile ? .mint : .purple,
                     bgValue: 0
                 )
                 treatments.append(treatment)

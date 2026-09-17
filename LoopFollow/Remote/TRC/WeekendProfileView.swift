@@ -3,12 +3,13 @@
 
 import SwiftUI
 
-/// Remotely starts or stops Trio's Weekend Profile -- the "second profile" toggle in Trio's
-/// Adjustments screen. Unlike Overrides, there's no preset to pick or target/duration to set here:
-/// Weekend Profile's own name, target, and basal/ISF schedule are already configured in the app, so
+/// Remotely starts or stops Trio's "Profile" feature (internally still called Weekend Profile in
+/// Trio's own code and on Nightscout, hence the type name here) -- the "second profile" toggle in
+/// Trio's Adjustments screen. Unlike Overrides, there's no preset to pick or target/duration to set
+/// here: Profile's own name, target, and basal/ISF schedule are already configured in the app, so
 /// this view only flips it on or off. `weekendProfileActive` reflects whether the currently active
-/// Nightscout entry was posted by Weekend Profile specifically (enteredBy == "Trio Weekend
-/// Profile"), as opposed to a real Override that happens to also be running -- see
+/// Nightscout entry was posted by Profile specifically (enteredBy == "Trio Weekend Profile"), as
+/// opposed to a real Override that happens to also be running -- see
 /// `MainViewController.processNSOverrides`.
 struct WeekendProfileView: View {
     @Environment(\.presentationMode) private var presentationMode
@@ -40,7 +41,7 @@ struct WeekendProfileView: View {
                 } else {
                     Form {
                         if weekendProfileActive.value {
-                            Section(header: Text("Weekend Profile")) {
+                            Section(header: Text("Profile")) {
                                 HStack {
                                     Text("Status")
                                     Spacer()
@@ -52,7 +53,7 @@ struct WeekendProfileView: View {
                                     showAlert = true
                                 } label: {
                                     HStack {
-                                        Text("Stop Weekend Profile")
+                                        Text("Stop Profile")
                                         Spacer()
                                         Image(systemName: "xmark.app")
                                             .font(.title)
@@ -61,15 +62,15 @@ struct WeekendProfileView: View {
                                 .tint(.red)
                             }
                         } else {
-                            Section(header: Text("Weekend Profile")) {
-                                Text("Weekend Profile is not currently active.")
+                            Section(header: Text("Profile")) {
+                                Text("Profile is not currently active.")
                                     .foregroundColor(.secondary)
                                 Button {
                                     alertType = .confirmStart
                                     showAlert = true
                                 } label: {
                                     HStack {
-                                        Text("Start Weekend Profile")
+                                        Text("Start Profile")
                                         Spacer()
                                         Image(systemName: "arrow.right.circle")
                                             .foregroundColor(.blue)
@@ -80,7 +81,7 @@ struct WeekendProfileView: View {
 
                         Section {
                             Text(
-                                "Uses the name, target, and basal/ISF schedule already saved in Trio's Adjustments \u{2192} Weekend Profile screen. This only turns it on or off remotely -- it can't change its settings, and it has no effect if Weekend Profile hasn't been configured and saved at least once in the app."
+                                "Uses the name, target, and basal/ISF schedule already saved in Trio's Adjustments \u{2192} Profile screen. This only turns it on or off remotely -- it can't change its settings, and it has no effect if Profile hasn't been configured and saved at least once in the app."
                             )
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -93,14 +94,14 @@ struct WeekendProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Weekend Profile")
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .alert(isPresented: $showAlert) {
                 switch alertType {
                 case .confirmStart:
                     return Alert(
-                        title: Text("Start Weekend Profile"),
-                        message: Text("Do you want to remotely start Weekend Profile?"),
+                        title: Text("Start Profile"),
+                        message: Text("Do you want to remotely start Profile?"),
                         primaryButton: .default(Text("Confirm"), action: {
                             startWeekendProfile()
                         }),
@@ -108,8 +109,8 @@ struct WeekendProfileView: View {
                     )
                 case .confirmStop:
                     return Alert(
-                        title: Text("Stop Weekend Profile"),
-                        message: Text("Are you sure you want to stop Weekend Profile?"),
+                        title: Text("Stop Profile"),
+                        message: Text("Are you sure you want to stop Profile?"),
                         primaryButton: .default(Text("Confirm"), action: {
                             stopWeekendProfile()
                         }),
@@ -145,11 +146,11 @@ struct WeekendProfileView: View {
             DispatchQueue.main.async {
                 self.isLoading = false
                 if success {
-                    self.statusMessage = "Start Weekend Profile command successfully sent."
+                    self.statusMessage = "Start Profile command successfully sent."
                     self.alertType = .statusSuccess
                     LogManager.shared.log(category: .apns, message: "sendStartWeekendProfilePushNotification succeeded")
                 } else {
-                    self.statusMessage = errorMessage ?? "Failed to send Start Weekend Profile command."
+                    self.statusMessage = errorMessage ?? "Failed to send Start Profile command."
                     self.alertType = .statusFailure
                     LogManager.shared.log(category: .apns, message: "sendStartWeekendProfilePushNotification failed. Error: \(errorMessage ?? "unknown error")")
                 }
@@ -165,11 +166,11 @@ struct WeekendProfileView: View {
             DispatchQueue.main.async {
                 self.isLoading = false
                 if success {
-                    self.statusMessage = "Stop Weekend Profile command successfully sent."
+                    self.statusMessage = "Stop Profile command successfully sent."
                     self.alertType = .statusSuccess
                     LogManager.shared.log(category: .apns, message: "sendStopWeekendProfilePushNotification succeeded")
                 } else {
-                    self.statusMessage = errorMessage ?? "Failed to send Stop Weekend Profile command."
+                    self.statusMessage = errorMessage ?? "Failed to send Stop Profile command."
                     self.alertType = .statusFailure
                     LogManager.shared.log(category: .apns, message: "sendStopWeekendProfilePushNotification failed. Error: \(errorMessage ?? "unknown error")")
                 }

@@ -701,8 +701,9 @@ private struct MainBGChart: View {
     }
 
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
+    /// Time leads the entry, then the label and value, so the pill reads "when, then what".
     private func bgPillText(for point: BGChartModel.BGPoint) -> String {
-        "BG\n\(Localizer.toDisplayUnits(String(Int(point.value))))\n\(model.pillTimeString(for: point.date))"
+        "\(model.pillTimeString(for: point.date))\nBG\n\(Localizer.toDisplayUnits(String(Int(point.value))))"
     }
 
     private func bandPillTexts(at date: Date) -> [String] {
@@ -783,9 +784,11 @@ private struct MainBGChart: View {
             }
         }
 
+        // BG leads the stack (its own entry already shows time first, see bgPillText), followed
+        // by whatever treatments -- an SMB, a bolus, etc. -- fall within the capture window.
         var items = captured
         if let nearestBG, nearestBG.distance <= BGChartConfig.selectionTolerance {
-            items.append(nearestBG)
+            items.insert(nearestBG, at: 0)
         }
         if let primary = items.min(by: { $0.distance < $1.distance }) {
             let texts = items.map(\.text) + bandPillTexts(at: selected)

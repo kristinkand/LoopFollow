@@ -23,7 +23,7 @@ struct TrioRemoteControlView: View {
                     CommandButtonView(command: "Bolus", iconName: "syringe", destination: BolusView())
                     CommandButtonView(command: "Temp Target", iconName: "scope", destination: TempTargetView(), isActive: activeTempTarget.value != nil)
                     CommandButtonView(command: "Overrides", iconName: "slider.horizontal.3", destination: OverrideView(), isActive: activeOverrideNote.value != nil)
-                    CommandButtonView(command: "Weekend Profile", iconName: "calendar", destination: WeekendProfileView(), isActive: weekendProfileActive.value)
+                    CommandButtonView(command: "Profile", iconName: "calendar", destination: WeekendProfileView(), isActive: weekendProfileActive.value)
                 }
                 .padding(.horizontal)
 

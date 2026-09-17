@@ -890,7 +890,7 @@ enum TreatmentType: CaseIterable, Hashable {
         case .tempBasal: return "Basal"
         case .override: return "Override"
         case .tempTarget: return "Temp Target"
-        case .weekendProfile: return "Weekend Profile"
+        case .weekendProfile: return "Profile"
         }
     }
 }
@@ -1299,11 +1299,11 @@ class TreatmentsViewModel: ObservableObject {
                 let isWeekendProfile = (entry["enteredBy"] as? String) == "Trio Weekend Profile"
 
                 let subtitleParts = [
-                    isWeekendProfile ? "Weekend Profile" : "Override",
+                    isWeekendProfile ? "Profile" : "Override",
                     durationMinutes > 0 ? "\(Int(durationMinutes))m" : nil
                 ].compactMap { $0 }
                 let subtitle = subtitleParts.joined(separator: " • ")
-                let title = reason.isEmpty ? (isWeekendProfile ? "Weekend Profile" : "Temporary Override") : reason
+                let title = reason.isEmpty ? (isWeekendProfile ? "Profile" : "Temporary Override") : reason
 
                 let treatment = Treatment(
                     id: "\(nsId)-override",

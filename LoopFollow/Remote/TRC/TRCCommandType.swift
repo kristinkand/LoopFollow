@@ -21,8 +21,8 @@ enum TRCCommandType: String, Encodable {
         case .meal: return "Meal"
         case .startOverride: return "Start Override"
         case .cancelOverride: return "Cancel Override"
-        case .startWeekendProfile: return "Start Weekend Profile"
-        case .stopWeekendProfile: return "Stop Weekend Profile"
+        case .startWeekendProfile: return "Start Profile"
+        case .stopWeekendProfile: return "Stop Profile"
         }
     }
 }

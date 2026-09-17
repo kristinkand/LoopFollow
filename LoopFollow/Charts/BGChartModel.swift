@@ -479,7 +479,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: dose,
-                pillText: "SMB\n\(dose)U\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nSMB\n\(dose)U"
             )
         }
         (boluses, smbs) = Self.spreadTogether(bolusPoints, smbPoints, minGap: Spread.bolusGap, maxShift: Spread.bolusShift)

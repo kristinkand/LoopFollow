@@ -89,6 +89,9 @@ final class BGChartModel: ObservableObject {
         let yTop: Double
         let label: String
         let pillText: String
+        /// Overrides normally render in `overrideColor`; a band entered by Trio's
+        /// Weekend Profile feature overrides that with mint, matching its color in Trio.
+        let color: Color
         var id: String { "\(start.timeIntervalSince1970)-\(end.timeIntervalSince1970)" }
     }
 
@@ -535,13 +538,15 @@ final class BGChartModel: ObservableObject {
         overrides = (showOtherTreatments ? vc.overrideGraphData : []).map {
             let overrideName = $0.reason.trimmingCharacters(in: .whitespacesAndNewlines)
             let displayName = overrideName.isEmpty ? "Override" : overrideName
+            let isWeekendProfile = $0.enteredBy == "Trio Weekend Profile"
             return BandRect(
                 start: Date(timeIntervalSince1970: $0.date),
                 end: Date(timeIntervalSince1970: $0.endDate),
                 yBottom: yBottom,
                 yTop: yTop,
                 label: displayName,
-                pillText: "Override\n\(displayName)\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                pillText: "Override\n\(displayName)\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                color: isWeekendProfile ? .mint : overrideColor
             )
         }
         tempTargets = (showOtherTreatments ? vc.tempTargetGraphData : []).map {
@@ -555,7 +560,8 @@ final class BGChartModel: ObservableObject {
                 yBottom: yCenter - 5,
                 yTop: yCenter + 5,
                 label: "Temp Target",
-                pillText: "Temp Target\n\(Localizer.toDisplayUnits(target))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                pillText: "Temp Target\n\(Localizer.toDisplayUnits(target))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                color: tempTargetColor
             )
         }
 

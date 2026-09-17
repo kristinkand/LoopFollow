@@ -1211,7 +1211,7 @@ private struct BGChartCanvas: View, Equatable {
                 yStart: .value("yBottom", band.yBottom),
                 yEnd: .value("yTop", band.yTop)
             )
-            .foregroundStyle(model.overrideColor.opacity(0.6))
+            .foregroundStyle(band.color.opacity(0.6))
         }
 
         ForEach(model.tempTargets.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
@@ -1221,7 +1221,7 @@ private struct BGChartCanvas: View, Equatable {
                 yStart: .value("yBottom", band.yBottom),
                 yEnd: .value("yTop", band.yTop)
             )
-            .foregroundStyle(model.tempTargetColor.opacity(0.5))
+            .foregroundStyle(band.color.opacity(0.5))
         }
     }
 

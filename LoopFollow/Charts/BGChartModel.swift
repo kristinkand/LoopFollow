@@ -455,7 +455,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: dose,
-                pillText: "Bolus\n\(dose)U\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nBolus\n\(dose)U"
             )
         }
         carbs = Self.spread((showCarbs ? vc.carbData : []).map {
@@ -469,7 +469,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: label,
-                pillText: "Carbs\n\(grams)g\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))"
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g"
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
         let smbPoints = (showBolus ? vc.smbData : []).map {
@@ -493,10 +493,10 @@ final class BGChartModel: ObservableObject {
             )
         }
         suspends = (showOtherTreatments ? vc.suspendGraphData : []).map {
-            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Suspend\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")
+            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nSuspend")
         }
         resumes = (showOtherTreatments ? vc.resumeGraphData : []).map {
-            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Resume\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")
+            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nResume")
         }
         sensorStarts = (showOtherTreatments ? vc.sensorStartGraphData : []).map {
             TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Sensor Start\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")

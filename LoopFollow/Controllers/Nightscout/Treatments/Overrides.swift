@@ -8,6 +8,7 @@ extension MainViewController {
         overrideGraphData.removeAll()
         var activeOverrideNote: String?
         var activeOverrideEndAt: TimeInterval?
+        var activeOverrideIsWeekendProfile = false
 
         let sorted = entries.sorted { lhs, rhs in
             guard
@@ -91,11 +92,13 @@ extension MainViewController {
             if now >= start, now < end {
                 activeOverrideNote = e["notes"] as? String ?? e["reason"] as? String
                 activeOverrideEndAt = trueEnd
+                activeOverrideIsWeekendProfile = (e["enteredBy"] as? String) == "Trio Weekend Profile"
             }
         }
 
         Observable.shared.override.value = activeOverrideNote
         Observable.shared.overrideEndAt.value = activeOverrideEndAt
+        Observable.shared.weekendProfileActive.value = activeOverrideIsWeekendProfile
         if Storage.shared.device.value != "Loop" {
             if let note = activeOverrideNote {
                 infoManager.updateInfoData(type: .override, value: note)

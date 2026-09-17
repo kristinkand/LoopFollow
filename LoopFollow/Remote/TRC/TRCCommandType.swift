@@ -10,6 +10,8 @@ enum TRCCommandType: String, Encodable {
     case meal
     case startOverride = "start_override"
     case cancelOverride = "cancel_override"
+    case startWeekendProfile = "start_weekend_profile"
+    case stopWeekendProfile = "stop_weekend_profile"
 
     var displayName: String {
         switch self {
@@ -19,6 +21,8 @@ enum TRCCommandType: String, Encodable {
         case .meal: return "Meal"
         case .startOverride: return "Start Override"
         case .cancelOverride: return "Cancel Override"
+        case .startWeekendProfile: return "Start Weekend Profile"
+        case .stopWeekendProfile: return "Stop Weekend Profile"
         }
     }
 }

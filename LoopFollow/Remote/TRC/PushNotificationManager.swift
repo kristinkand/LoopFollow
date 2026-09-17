@@ -88,6 +88,26 @@ class PushNotificationManager {
         sendEncryptedCommand(payload: payload, completion: completion)
     }
 
+    func sendStartWeekendProfilePushNotification(completion: @escaping (Bool, String?) -> Void) {
+        let payload = CommandPayload(
+            user: user,
+            commandType: .startWeekendProfile,
+            timestamp: Date().timeIntervalSince1970,
+            returnNotification: createReturnNotificationInfo()
+        )
+        sendEncryptedCommand(payload: payload, completion: completion)
+    }
+
+    func sendStopWeekendProfilePushNotification(completion: @escaping (Bool, String?) -> Void) {
+        let payload = CommandPayload(
+            user: user,
+            commandType: .stopWeekendProfile,
+            timestamp: Date().timeIntervalSince1970,
+            returnNotification: createReturnNotificationInfo()
+        )
+        sendEncryptedCommand(payload: payload, completion: completion)
+    }
+
     func sendBolusPushNotification(bolusAmount: HKQuantity, completion: @escaping (Bool, String?) -> Void) {
         let bolusAmountDecimal = Decimal(bolusAmount.doubleValue(for: .internationalUnit()))
         let payload = CommandPayload(

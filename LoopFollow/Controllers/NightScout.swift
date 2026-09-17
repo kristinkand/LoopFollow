@@ -74,6 +74,7 @@ extension MainViewController {
         overrideGraphData.removeAll()
         Observable.shared.override.value = nil
         Observable.shared.overrideEndAt.value = nil
+        Observable.shared.weekendProfileActive.value = false
         updateOverrideGraph()
     }
 

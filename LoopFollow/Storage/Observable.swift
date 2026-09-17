@@ -17,6 +17,9 @@ class Observable {
 
     /// End of the active override as Unix epoch seconds; nil = no override or indefinite.
     var overrideEndAt = ObservableValue<TimeInterval?>(default: nil)
+    /// True while the currently active override entry was posted by Trio's Weekend Profile
+    /// feature (enteredBy == "Trio Weekend Profile") rather than a real Override.
+    var weekendProfileActive = ObservableValue<Bool>(default: false)
     /// End of the active temp target as Unix epoch seconds; nil = no active temp target.
     var tempTargetEndAt = ObservableValue<TimeInterval?>(default: nil)
 

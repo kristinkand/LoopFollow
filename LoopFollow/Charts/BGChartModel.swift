@@ -1,4 +1,4 @@
-// LoopFollow
+open -e /Users/kristin/Documents/GitHub/LoopFollow/LoopFollow/Charts/BGChartModel.swift// LoopFollow
 // BGChartModel.swift
 
 import Foundation
@@ -54,17 +54,19 @@ final class BGChartModel: ObservableObject {
         let sgv: Double
         let label: String
         let pillText: String
+        let treatment: CarbTreatment?
         /// Where the symbol is drawn. Equals `date` unless `spread` nudged it
         /// left to keep a crowded run of treatments from stacking up.
         var drawnDate: Date
         var id: Double { date.timeIntervalSince1970 }
 
-        init(date: Date, value: Double, sgv: Double, label: String, pillText: String) {
+        init(date: Date, value: Double, sgv: Double, label: String, pillText: String, treatment: CarbTreatment? = nil) {
             self.date = date
             self.value = value
             self.sgv = sgv
             self.label = label
             self.pillText = pillText
+            self.treatment = treatment
             drawnDate = date
         }
     }
@@ -480,7 +482,8 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: label,
-                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g"
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g",
+                treatment: $0.treatment
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
         let smbPoints = (showBolus ? vc.smbData : []).map {

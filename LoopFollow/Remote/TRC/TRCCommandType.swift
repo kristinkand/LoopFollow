@@ -1,4 +1,4 @@
-// LoopFollow
+open -e /Users/kristin/Documents/GitHub/LoopFollow/LoopFollow/Remote/TRC/TRCCommandType.swift// LoopFollow
 // TRCCommandType.swift
 
 import Foundation
@@ -12,6 +12,13 @@ enum TRCCommandType: String, Encodable {
     case cancelOverride = "cancel_override"
     case startWeekendProfile = "start_weekend_profile"
     case stopWeekendProfile = "stop_weekend_profile"
+    case editMeal = "edit_meal"
+    case deleteMeal = "delete_meal"
+
+    /// One collapse id per command.
+    var usesCommandIDAsCollapseID: Bool {
+        self == .editMeal || self == .deleteMeal
+    }
 
     var displayName: String {
         switch self {
@@ -23,6 +30,8 @@ enum TRCCommandType: String, Encodable {
         case .cancelOverride: return "Cancel Override"
         case .startWeekendProfile: return "Start Profile"
         case .stopWeekendProfile: return "Stop Profile"
+        case .editMeal: return "Edit Meal"
+        case .deleteMeal: return "Delete Meal"
         }
     }
 }

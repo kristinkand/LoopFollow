@@ -1,4 +1,4 @@
-open -e /Users/kristin/Documents/GitHub/LoopFollow/LoopFollow/Charts/BGChartModel.swift// LoopFollow
+//LoopFollow
 // BGChartModel.swift
 
 import Foundation

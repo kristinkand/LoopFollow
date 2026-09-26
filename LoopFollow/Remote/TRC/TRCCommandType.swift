@@ -1,4 +1,4 @@
-open -e /Users/kristin/Documents/GitHub/LoopFollow/LoopFollow/Remote/TRC/TRCCommandType.swift// LoopFollow
+//LoopFollow
 // TRCCommandType.swift
 
 import Foundation

@@ -1,4 +1,4 @@
-// LoopFollow
+//LoopFollow
 // BGChartModel.swift
 
 import Foundation
@@ -54,17 +54,19 @@ final class BGChartModel: ObservableObject {
         let sgv: Double
         let label: String
         let pillText: String
+        let treatment: CarbTreatment?
         /// Where the symbol is drawn. Equals `date` unless `spread` nudged it
         /// left to keep a crowded run of treatments from stacking up.
         var drawnDate: Date
         var id: Double { date.timeIntervalSince1970 }
 
-        init(date: Date, value: Double, sgv: Double, label: String, pillText: String) {
+        init(date: Date, value: Double, sgv: Double, label: String, pillText: String, treatment: CarbTreatment? = nil) {
             self.date = date
             self.value = value
             self.sgv = sgv
             self.label = label
             self.pillText = pillText
+            self.treatment = treatment
             drawnDate = date
         }
     }
@@ -82,6 +84,12 @@ final class BGChartModel: ObservableObject {
         var id: TimeInterval { date.timeIntervalSince1970 }
     }
 
+    struct ScheduledTargetPoint: Identifiable {
+        let date: Date
+        let value: Double
+        var id: TimeInterval { date.timeIntervalSince1970 }
+    }
+    
     struct BandRect: Identifiable {
         let start: Date
         let end: Date
@@ -134,7 +142,8 @@ final class BGChartModel: ObservableObject {
 
     @Published var basal: [BasalStep] = []
     @Published var basalScheduled: [ScheduledBasalPoint] = []
-
+    @Published var targetScheduled: [ScheduledTargetPoint] = []
+    
     @Published var boluses: [TreatmentPoint] = []
     @Published var carbs: [TreatmentPoint] = []
     @Published var smbs: [TreatmentPoint] = []
@@ -418,6 +427,7 @@ final class BGChartModel: ObservableObject {
         // collect the data regardless (it also feeds the info rows), so hidden
         // kinds are dropped here at render time.
         let showBasal = Storage.shared.graphBasal.value
+        let showTargetLine = Storage.shared.graphTargetLine.value
         let showBolus = Storage.shared.graphBolus.value
         let showCarbs = Storage.shared.graphCarbs.value
         let showOtherTreatments = Storage.shared.graphOtherTreatments.value
@@ -472,7 +482,8 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: label,
-                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g"
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g",
+                treatment: $0.treatment
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
         let smbPoints = (showBolus ? vc.smbData : []).map {
@@ -516,6 +527,10 @@ final class BGChartModel: ObservableObject {
 
         basalScheduled = (showBasal ? vc.basalScheduleData : []).map {
             ScheduledBasalPoint(date: Date(timeIntervalSince1970: $0.date), rate: $0.basalRate)
+        }
+        
+        targetScheduled = (showTargetLine ? vc.targetScheduleData : []).map {
+            ScheduledTargetPoint(date: Date(timeIntervalSince1970: $0.date), value: $0.targetHigh)
         }
 
         var steps: [BasalStep] = []

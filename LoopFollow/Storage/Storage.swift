@@ -22,6 +22,10 @@ class Storage {
     var lfKeyId = StorageValue<String>(key: "lfKeyId", defaultValue: "")
     var bundleId = StorageValue<String>(key: "bundleId", defaultValue: "")
     var user = StorageValue<String>(key: "user", defaultValue: "")
+    /// Remote command types the AID app advertises in its Nightscout profile.
+    var remoteCommands = StorageValue<[String]>(key: "remoteCommands", defaultValue: [])
+    /// Remote command types the Loop build advertises in its devicestatus.
+    var loopRemoteCommands = StorageValue<[String]>(key: "loopRemoteCommands", defaultValue: [])
 
     var maxBolus = SecureStorageValue<HKQuantity>(key: "maxBolus", defaultValue: HKQuantity(unit: .internationalUnit(), doubleValue: 1.0))
     var maxCarbs = SecureStorageValue<HKQuantity>(key: "maxCarbs", defaultValue: HKQuantity(unit: .gram(), doubleValue: 30.0))
@@ -173,6 +177,7 @@ class Storage {
     var downloadPrediction = StorageValue<Bool>(key: "downloadPrediction", defaultValue: true)
     var graphOtherTreatments = StorageValue<Bool>(key: "graphOtherTreatments", defaultValue: true)
     var graphBasal = StorageValue<Bool>(key: "graphBasal", defaultValue: true)
+    var graphTargetLine = StorageValue<Bool>(key: "graphTargetLine", defaultValue: true)
     var graphBolus = StorageValue<Bool>(key: "graphBolus", defaultValue: true)
     var graphCarbs = StorageValue<Bool>(key: "graphCarbs", defaultValue: true)
     var bgUpdateDelay = StorageValue<Int>(key: "bgUpdateDelay", defaultValue: 10)
@@ -398,6 +403,7 @@ class Storage {
         downloadPrediction.reload()
         graphOtherTreatments.reload()
         graphBasal.reload()
+        graphTargetLine.reload()
         graphBolus.reload()
         graphCarbs.reload()
         bgUpdateDelay.reload()

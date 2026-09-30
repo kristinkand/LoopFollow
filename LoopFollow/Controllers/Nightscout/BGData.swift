@@ -334,6 +334,9 @@ extension MainViewController {
                 LiveActivityManager.shared.refreshFromCurrentState(reason: "bg")
             #endif
 
+            // Home screen widget
+            self.updateHomeScreenWidget(entries: entries, deltaBG: deltaBG)
+
             // Update contact
             if Storage.shared.contactEnabled.value {
                 self.contactImageUpdater

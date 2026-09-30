@@ -290,6 +290,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             .sink { [weak self] _ in
                 self?.updateBGGraphSettings()
                 self?.updateBGGraph()
+                self?.updateStats()
             }
             .store(in: &cancellables)
 

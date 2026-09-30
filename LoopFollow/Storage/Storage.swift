@@ -76,6 +76,8 @@ class Storage {
     var colorBGText = StorageValue<Bool>(key: "colorBGText", defaultValue: true)
     var appearanceMode = StorageValue<AppearanceMode>(key: "appearanceMode", defaultValue: .dark)
     var showStats = StorageValue<Bool>(key: "showStats", defaultValue: true)
+    /// Show stats as a Trio-style Time in Range band instead of the statistics box.
+    var showTIRBand = StorageValue<Bool>(key: "showTIRBand", defaultValue: true)
     var useIFCC = StorageValue<Bool>(key: "useIFCC", defaultValue: false)
     var showSmallGraph = StorageValue<Bool>(key: "showSmallGraph", defaultValue: true)
     var screenlockSwitchState = StorageValue<Bool>(key: "screenlockSwitchState", defaultValue: true)
@@ -330,6 +332,7 @@ class Storage {
         colorBGText.reload()
         appearanceMode.reload()
         showStats.reload()
+        showTIRBand.reload()
         useIFCC.reload()
         showSmallGraph.reload()
         screenlockSwitchState.reload()

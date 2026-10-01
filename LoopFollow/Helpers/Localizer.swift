@@ -21,6 +21,7 @@ enum GlucoseDisplayUnit: String, Codable, CaseIterable {
 enum TimeInRangeDisplayMode: String, Codable, CaseIterable {
     case tir = "TIR"
     case titr = "TITR"
+    case ting = "TING"
     case custom = "Custom"
 }
 
@@ -72,6 +73,9 @@ final class UnitSettingsStore {
             return (70.0, 180.0, target)
         case .titr:
             return (70.0, 140.0, target)
+        case .ting:
+            // Same as Trio's Time in Normoglycemia banner: 63–180 mg/dL (3.5–10.0 mmol/L).
+            return (63.0, 180.0, target)
         case .custom:
             return (Storage.shared.lowLine.value, Storage.shared.highLine.value, target)
         }

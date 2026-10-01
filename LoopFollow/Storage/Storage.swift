@@ -76,6 +76,8 @@ class Storage {
     var colorBGText = StorageValue<Bool>(key: "colorBGText", defaultValue: true)
     var appearanceMode = StorageValue<AppearanceMode>(key: "appearanceMode", defaultValue: .dark)
     var showStats = StorageValue<Bool>(key: "showStats", defaultValue: true)
+    /// Show stats as a Trio-style Time in Range band instead of the statistics box.
+    var showTIRBand = StorageValue<Bool>(key: "showTIRBand", defaultValue: true)
     var useIFCC = StorageValue<Bool>(key: "useIFCC", defaultValue: false)
     var showSmallGraph = StorageValue<Bool>(key: "showSmallGraph", defaultValue: true)
     var screenlockSwitchState = StorageValue<Bool>(key: "screenlockSwitchState", defaultValue: true)
@@ -139,6 +141,11 @@ class Storage {
     var showPriorDayTimeLines = StorageValue<Bool>(key: "showPriorDayTimeMarkers", defaultValue: false)
     var showYesterdayLine = StorageValue<Bool>(key: "showYesterdayLine", defaultValue: false)
     var smallGraphTreatments = StorageValue<Bool>(key: "smallGraphTreatments", defaultValue: true)
+    var showIOBGraph = StorageValue<Bool>(key: "showIOBGraph", defaultValue: false)
+    var showCOBGraph = StorageValue<Bool>(key: "showCOBGraph", defaultValue: false)
+    var showSensitivityRatioGraph = StorageValue<Bool>(key: "showSensitivityRatioGraph", defaultValue: false)
+    var showSmoothedBG = StorageValue<Bool>(key: "showSmoothedBG", defaultValue: false)
+    var historyCurvePlacement = StorageValue<HistoryCurvePlacement>(key: "historyCurvePlacement", defaultValue: .separate)
 
     var smallGraphHeight = StorageValue<Int>(key: "smallGraphHeight", defaultValue: 40)
     var predictionToLoad = StorageValue<Double>(key: "predictionToLoad", defaultValue: 1.0)
@@ -325,6 +332,7 @@ class Storage {
         colorBGText.reload()
         appearanceMode.reload()
         showStats.reload()
+        showTIRBand.reload()
         useIFCC.reload()
         showSmallGraph.reload()
         screenlockSwitchState.reload()

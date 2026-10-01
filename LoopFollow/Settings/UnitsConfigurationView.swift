@@ -25,6 +25,8 @@ struct UnitsConfigurationView: View {
     var sections: Sections = .all
 
     @State private var rangeMode = UnitSettingsStore.shared.timeInRangeMode
+    @ObservedObject private var showStats = Storage.shared.showStats
+    @ObservedObject private var showTIRBand = Storage.shared.showTIRBand
     @State private var glucoseUnit = UnitSettingsStore.shared.glucoseUnit
     @State private var lowValue = Storage.shared.lowLine.value
     @State private var highValue = Storage.shared.highLine.value
@@ -69,9 +71,24 @@ struct UnitsConfigurationView: View {
     private var statisticsSections: some View {
         Group {
             Section {
+                Toggle("Display Stats", isOn: $showStats.value)
+                if showStats.value {
+                    Picker("Stats Style", selection: $showTIRBand.value) {
+                        Text("Time in Range Band").tag(true)
+                        Text("Statistics Box").tag(false)
+                    }
+                }
+            } header: {
+                Text("Home Screen Stats")
+            } footer: {
+                Text("Time in Range Band shows today's time in range for the Range Mode below. Statistics Box shows the pie chart, averages and A1C for the last 24 hours. The same setting is in General.")
+            }
+
+            Section {
                 Picker("Range Mode", selection: $rangeMode) {
                     Text("TIR").tag(TimeInRangeDisplayMode.tir)
                     Text("TITR").tag(TimeInRangeDisplayMode.titr)
+                    Text("TING").tag(TimeInRangeDisplayMode.ting)
                     Text("Custom").tag(TimeInRangeDisplayMode.custom)
                 }
                 .pickerStyle(.segmented)
@@ -116,7 +133,7 @@ struct UnitsConfigurationView: View {
             } header: {
                 Text("Range")
             } footer: {
-                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nCustom — set your own low and high.\nTarget — the center point for the dynamic color gradient on the graph and BG value.")
+                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nTING — Time in Normoglycemia, within \(rangeBounds(63, 180)).\nCustom — set your own low and high.\nTarget — the center point for the dynamic color gradient on the graph and BG value.")
             }
 
             Section {

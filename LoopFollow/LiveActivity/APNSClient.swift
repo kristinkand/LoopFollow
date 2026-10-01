@@ -195,9 +195,9 @@ class APNSClient {
         state: GlucoseLiveActivityAttributes.ContentState,
         staleDate: Date,
     ) -> Data? {
-        guard let contentStateDict = contentStateDictionary(state: state) else { return nil }
-
-        let payload: [String: Any] = [
+        fittingPayload { historyStride in
+            guard let contentStateDict = self.contentStateDictionary(state: state, historyStride: historyStride) else { return nil }
+            return [
             "aps": [
                 "timestamp": Int(Date().timeIntervalSince1970),
                 "event": "start",
@@ -211,25 +211,58 @@ class APNSClient {
                 ],
                 "interruption-level": "passive",
             ],
-        ]
-        return try? JSONSerialization.data(withJSONObject: payload)
+            ]
+        }
     }
 
     // MARK: - Payload Builder
 
     private func buildPayload(state: GlucoseLiveActivityAttributes.ContentState) -> Data? {
-        guard let contentState = contentStateDictionary(state: state) else { return nil }
-        let payload: [String: Any] = [
-            "aps": [
-                "timestamp": Int(Date().timeIntervalSince1970),
-                "event": "update",
-                "content-state": contentState,
-            ],
-        ]
-        return try? JSONSerialization.data(withJSONObject: payload)
+        fittingPayload { historyStride in
+            guard let contentState = self.contentStateDictionary(state: state, historyStride: historyStride) else { return nil }
+            return [
+                "aps": [
+                    "timestamp": Int(Date().timeIntervalSince1970),
+                    "event": "update",
+                    "content-state": contentState,
+                ],
+            ]
+        }
     }
 
-    private func contentStateDictionary(state: GlucoseLiveActivityAttributes.ContentState) -> [String: Any]? {
+    // MARK: - Payload size
+
+    /// APNs rejects Live Activity payloads over 4096 bytes; stay a little under.
+    private static let maxPayloadBytes = 4000
+
+    /// Builds the payload with the full graph history, thinning the history
+    /// (every 2nd, 4th, 8th reading) until it fits. If it still doesn't fit,
+    /// the update is sent without the graph rather than not at all.
+    /// `build` receives the history stride; 0 means "leave the graph out".
+    private func fittingPayload(_ build: (Int) -> [String: Any]?) -> Data? {
+        for stride in [1, 2, 4, 8] {
+            guard let object = build(stride),
+                  let data = try? JSONSerialization.data(withJSONObject: object)
+            else { return nil }
+            if data.count <= Self.maxPayloadBytes { return data }
+        }
+        LogManager.shared.log(category: .apns, message: "APNs payload too large even with thinned history — sending without graph")
+        guard let object = build(0) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: object)
+    }
+
+    /// Every `stride`-th point, always keeping the newest one.
+    private func thinnedHistory(_ history: [LAHistoryPoint], stride: Int) -> [LAHistoryPoint] {
+        guard stride > 1, let newest = history.last else { return history }
+        var result = Swift.stride(from: 0, to: history.count, by: stride).map { history[$0] }
+        if result.last != newest { result.append(newest) }
+        return result
+    }
+
+    private func contentStateDictionary(
+        state: GlucoseLiveActivityAttributes.ContentState,
+        historyStride: Int = 1
+    ) -> [String: Any]? {
         let snapshot = state.snapshot
 
         var snapshotDict: [String: Any] = [
@@ -267,6 +300,14 @@ class APNSClient {
         if snapshot.iageInsertTime > 0 { snapshotDict["iageInsertTime"] = snapshot.iageInsertTime }
         if let minBgMgdl = snapshot.minBgMgdl { snapshotDict["minBgMgdl"] = minBgMgdl }
         if let maxBgMgdl = snapshot.maxBgMgdl { snapshotDict["maxBgMgdl"] = maxBgMgdl }
+
+        // Lock Screen mini graph. Without this every pushed update (all
+        // background updates) arrives with an empty history and the graph
+        // disappears until the next direct update while the app is open.
+        if historyStride > 0, !snapshot.history.isEmpty {
+            snapshotDict["history"] = thinnedHistory(snapshot.history, stride: historyStride)
+                .map { ["d": Int($0.d), "v": $0.v] }
+        }
 
         return [
             "snapshot": snapshotDict,

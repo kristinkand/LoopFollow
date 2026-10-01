@@ -32,7 +32,8 @@ extension MainViewController {
             overrideEndAt: snapshot?.overrideEndAt,
             tempTargetMgdl: snapshot?.tempTargetMgdl,
             tempTargetEndAt: snapshot?.tempTargetEndAt,
-            profileName: snapshot?.profileName
+            profileName: snapshot?.profileName,
+            iob: snapshot?.iob
         )
         WidgetBGStore.save(data)
     }

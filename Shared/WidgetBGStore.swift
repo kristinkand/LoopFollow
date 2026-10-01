@@ -46,6 +46,8 @@ struct WidgetBGData: Codable, Equatable {
     var tempTargetEndAt: TimeInterval? = nil
     /// Active profile name.
     var profileName: String? = nil
+    /// Insulin on board in units (nil if unknown).
+    var iob: Double? = nil
 }
 
 enum WidgetBGStore {

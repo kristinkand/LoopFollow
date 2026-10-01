@@ -95,9 +95,14 @@ private struct SmallBGView: View {
             BGHeader(data: data, now: now, size: 34)
             HStack {
                 Text(BGWidgetFormat.delta(data))
-                Spacer()
+                Spacer(minLength: 2)
+                if let iob = BGWidgetFormat.iob(data) {
+                    Text("\(iob) U")
+                    Spacer(minLength: 2)
+                }
                 Text(BGWidgetFormat.ago(data, now: now))
             }
+            .lineLimit(1)
             .font(.caption)
             .foregroundStyle(.secondary)
             AdjustmentsRow(data: data, now: now, showProfile: false, fontSize: 11)
@@ -118,6 +123,11 @@ private struct MediumBGView: View {
                     Text("\(BGWidgetFormat.delta(data)) \(data.unit.displayName)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    if let iob = BGWidgetFormat.iob(data) {
+                        Text("IOB \(iob) U")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer(minLength: 0)
                     Text(BGWidgetFormat.ago(data, now: now))
                         .font(.caption)
@@ -386,6 +396,12 @@ private enum BGWidgetFormat {
             if abs(v) < 0.05 { return "0.0" }
             return v > 0 ? String(format: "+%.1f", v) : String(format: "%.1f", v)
         }
+    }
+
+    /// IOB with one decimal, like the Live Activity.
+    static func iob(_ data: WidgetBGData) -> String? {
+        guard let v = data.iob else { return nil }
+        return String(format: "%.1f", v)
     }
 
     static func arrow(_ direction: String?) -> String {

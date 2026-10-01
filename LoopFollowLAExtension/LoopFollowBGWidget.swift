@@ -100,6 +100,7 @@ private struct SmallBGView: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+            AdjustmentsRow(data: data, now: now, showProfile: false, fontSize: 11)
             BGGraph(data: data, now: now, window: 3 * 3600, showTimeAxis: false, lineWidth: 2.5)
         }
     }
@@ -110,19 +111,22 @@ private struct MediumBGView: View {
     let now: Date
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                BGHeader(data: data, now: now, size: 44)
-                Text("\(BGWidgetFormat.delta(data)) \(data.unit.displayName)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-                Text(BGWidgetFormat.ago(data, now: now))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    BGHeader(data: data, now: now, size: 44)
+                    Text("\(BGWidgetFormat.delta(data)) \(data.unit.displayName)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Text(BGWidgetFormat.ago(data, now: now))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 115, alignment: .leading)
+                BGGraph(data: data, now: now, window: 4 * 3600, showTimeAxis: true, lineWidth: 3)
             }
-            .frame(width: 115, alignment: .leading)
-            BGGraph(data: data, now: now, window: 4 * 3600, showTimeAxis: true, lineWidth: 3)
+            AdjustmentsRow(data: data, now: now, showProfile: true, fontSize: 12)
         }
     }
 }
@@ -144,6 +148,90 @@ private struct RectangularBGView: View {
 }
 
 // MARK: - Building blocks
+
+/// Active override and temp target (with countdown when under 2 hours), and
+/// optionally the profile name -- the same information the Live Activity shows.
+/// Draws nothing when there is nothing to show.
+private struct AdjustmentsRow: View {
+    let data: WidgetBGData
+    let now: Date
+    let showProfile: Bool
+    let fontSize: CGFloat
+
+    /// Longer countdowns are left out; they read poorly in a small row.
+    private static let tickerMaxRemaining: TimeInterval = 2 * 3600
+
+    // Ends already in the past are stale data waiting for the next refresh.
+    private var overrideEnd: Date? {
+        guard let t = data.overrideEndAt, t > now.timeIntervalSince1970 else { return nil }
+        return Date(timeIntervalSince1970: t)
+    }
+
+    /// No end time means indefinite: keep showing the name.
+    private var overrideName: String? {
+        guard let name = data.overrideName, !name.isEmpty else { return nil }
+        if data.overrideEndAt != nil, overrideEnd == nil { return nil }
+        return name
+    }
+
+    private var tempTargetEnd: Date? {
+        guard let t = data.tempTargetEndAt, t > now.timeIntervalSince1970 else { return nil }
+        return Date(timeIntervalSince1970: t)
+    }
+
+    private var tempTargetText: String? {
+        guard tempTargetEnd != nil, let tt = data.tempTargetMgdl, tt > 0 else { return nil }
+        return BGWidgetFormat.value(tt, unit: data.unit)
+    }
+
+    private var profile: String? {
+        guard showProfile, let name = data.profileName, !name.isEmpty else { return nil }
+        return name
+    }
+
+    var body: some View {
+        if overrideName != nil || tempTargetText != nil || profile != nil {
+            HStack(spacing: 4) {
+                if let name = overrideName {
+                    Text("⏱")
+                    Text(name)
+                        .layoutPriority(1)
+                    if let end = overrideEnd, end.timeIntervalSince(now) <= Self.tickerMaxRemaining {
+                        countdown(to: end)
+                    }
+                }
+                if overrideName != nil, tempTargetText != nil {
+                    Text("·").foregroundStyle(.secondary)
+                }
+                if let tt = tempTargetText, let end = tempTargetEnd {
+                    Text("TT \(tt)")
+                    if end.timeIntervalSince(now) <= Self.tickerMaxRemaining {
+                        countdown(to: end)
+                    }
+                }
+                if let profile {
+                    if overrideName != nil || tempTargetText != nil {
+                        Text("·").foregroundStyle(.secondary)
+                    }
+                    Image(systemName: "person.crop.circle")
+                        .foregroundStyle(.secondary)
+                    Text(profile)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+    }
+
+    private func countdown(to end: Date) -> some View {
+        // Ticks down by itself; no widget refresh needed.
+        Text(timerInterval: now ... end, countsDown: true)
+            .frame(maxWidth: end.timeIntervalSince(now) >= 3600 ? 52 : 40, alignment: .leading)
+    }
+}
 
 /// Big BG value followed by the trend arrow.
 private struct BGHeader: View {

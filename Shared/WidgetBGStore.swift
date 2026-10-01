@@ -33,6 +33,19 @@ struct WidgetBGData: Codable, Equatable {
     let lowMgdl: Double
     let highMgdl: Double
     let targetMgdl: Double
+
+    // Active adjustments, same as the Live Activity shows. All optional, so
+    // data saved by an older build still loads.
+    /// Active override name (nil if none).
+    var overrideName: String? = nil
+    /// Override end, Unix epoch seconds (nil = indefinite).
+    var overrideEndAt: TimeInterval? = nil
+    /// Active temp target in mg/dL (nil if none).
+    var tempTargetMgdl: Double? = nil
+    /// Temp target end, Unix epoch seconds.
+    var tempTargetEndAt: TimeInterval? = nil
+    /// Active profile name.
+    var profileName: String? = nil
 }
 
 enum WidgetBGStore {

@@ -47,7 +47,10 @@ struct GeneralSettingsView: View {
                 }
                 Toggle("Display Stats", isOn: $showStats.value)
                 if showStats.value {
-                    Toggle("Stats as Time in Range Band", isOn: $showTIRBand.value)
+                    Picker("Stats Style", selection: $showTIRBand.value) {
+                        Text("Time in Range Band").tag(true)
+                        Text("Statistics Box").tag(false)
+                    }
                 }
                 Toggle("Display Small Graph", isOn: $showSmallGraph.value)
                 Toggle("Color BG Text", isOn: $colorBGText.value)

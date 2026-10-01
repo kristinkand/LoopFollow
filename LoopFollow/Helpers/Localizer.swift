@@ -74,7 +74,8 @@ final class UnitSettingsStore {
         case .titr:
             return (70.0, 140.0, target)
         case .ting:
-            return (63.0, 140.0, target)
+            // Same as Trio's Time in Normoglycemia banner: 63–180 mg/dL (3.5–10.0 mmol/L).
+            return (63.0, 180.0, target)
         case .custom:
             return (Storage.shared.lowLine.value, Storage.shared.highLine.value, target)
         }

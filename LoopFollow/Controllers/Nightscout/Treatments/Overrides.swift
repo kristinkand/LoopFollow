@@ -115,5 +115,6 @@ extension MainViewController {
         #if !targetEnvironment(macCatalyst)
             LiveActivityManager.shared.refreshFromCurrentState(reason: "overrideChanged")
         #endif
+        refreshHomeScreenWidget()
     }
 }

@@ -38,9 +38,10 @@ struct BGWidgetProvider: TimelineProvider {
     func getTimeline(in _: Context, completion: @escaping (Timeline<BGWidgetEntry>) -> Void) {
         let data = WidgetBGStore.load()
         let now = Date()
-        // One entry per minute so "x min" and the stale look stay correct between
-        // app updates. Timeline entries do not use WidgetKit's refresh budget.
-        let entries = (0 ..< 30).map { i in
+        // One entry per minute for an hour, so "x min" and the stale look stay
+        // correct between app updates even when iOS rations widget refreshes.
+        // Timeline entries do not use WidgetKit's refresh budget.
+        let entries = (0 ..< 60).map { i in
             BGWidgetEntry(date: now.addingTimeInterval(Double(i) * 60), data: data)
         }
         completion(Timeline(entries: entries, policy: .atEnd))

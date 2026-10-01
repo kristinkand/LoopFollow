@@ -588,6 +588,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appMovedToBackground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(
             category: .general,
             message: "App moved to background (refreshType=\(Storage.shared.backgroundRefreshType.value.rawValue), lowPowerMode=\(ProcessInfo.processInfo.isLowPowerModeEnabled), backgroundRefreshStatus=\(Self.describe(UIApplication.shared.backgroundRefreshStatus)))"
@@ -723,6 +727,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appCameToForeground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(category: .general, message: "App came to foreground")
 
         // BFU recovery (StorageReadiness.recover) is driven by AppDelegate before this

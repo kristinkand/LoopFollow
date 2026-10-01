@@ -287,6 +287,7 @@ class AlarmSound {
     fileprivate static func activateAudioSessionWithFallback() {
         let isBackgroundWithoutSilentTune = UIApplication.shared.applicationState == .background
             && Storage.shared.backgroundRefreshType.value != .silentTune
+            && !HeartbeatAudioFallback.shared.isActive
 
         let dominate: (label: String, options: AVAudioSession.CategoryOptions) = ("[]", [])
         let duck: (label: String, options: AVAudioSession.CategoryOptions) = (".duckOthers", .duckOthers)

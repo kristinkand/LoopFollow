@@ -126,6 +126,11 @@ class BLEManager: NSObject, ObservableObject {
         centralManager.stopScan()
     }
 
+    /// Time of the last heartbeat from the active device, if any.
+    func lastHeartbeatDate() -> Date? {
+        activeDevice?.lastHeartbeatTime
+    }
+
     func expectedHeartbeatInterval() -> TimeInterval? {
         guard let device = activeDevice else {
             return nil
@@ -229,6 +234,9 @@ extension BLEManager: BluetoothDeviceDelegate {
         guard let device = activeDevice else {
             return
         }
+
+        // Bluetooth is back: the silent tune fallback (if running) is no longer needed.
+        HeartbeatAudioFallback.shared.heartbeatReceived()
 
         let now = Date()
         guard let expectedInterval = device.expectedHeartbeatInterval() else {

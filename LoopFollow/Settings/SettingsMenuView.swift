@@ -200,6 +200,7 @@ enum SettingsRoute: Hashable, Identifiable {
             ]
         case .backgroundRefresh: return [
                 SettingsLeaf("Background Refresh Type", ["silent tune", "bluetooth", "rileylink", "omnipod", "heartbeat"]),
+                SettingsLeaf("Silent Tune Fallback", ["fallback", "heartbeat", "silent tune"]),
             ]
         case .importExport: return [
                 SettingsLeaf("Scan QR Code to Import Settings", ["qr"]),

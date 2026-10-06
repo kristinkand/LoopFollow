@@ -133,7 +133,7 @@ struct UnitsConfigurationView: View {
             } header: {
                 Text("Range")
             } footer: {
-                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nTING — Time in Normoglycemia, within \(rangeBounds(63, 180)).\nCustom — set your own low and high.\nTarget — the center point for the dynamic color gradient on the graph and BG value.")
+                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nTING — Time in Normoglycemia, within \(rangeBounds(63, 140)).\nCustom — set your own low and high.\nTarget — the center point for the dynamic color gradient on the graph and BG value.")
             }
 
             Section {

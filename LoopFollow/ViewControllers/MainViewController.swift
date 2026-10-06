@@ -292,6 +292,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
                 self?.updateBGGraphSettings()
                 self?.updateBGGraph()
                 self?.updateStats()
+                #if !targetEnvironment(macCatalyst)
+                    // Recolor the Live Activity for the new range right away.
+                    LiveActivityManager.shared.refreshFromCurrentState(reason: LiveActivityManager.rangeModeChangedReason)
+                #endif
             }
             .store(in: &cancellables)
 

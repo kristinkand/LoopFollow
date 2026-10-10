@@ -4,21 +4,34 @@
 import Foundation
 
 extension MainViewController {
-    func updateStats() {
-        if bgData.count > 0 {
-            var lastDayOfData = bgData
-            let graphHours = 24 * Storage.shared.downloadDays.value
-            // If we loaded more than 1 day of data, only use the last day for the stats
-            if graphHours > 24 {
-                let oneDayAgo = dateTimeUtils.getTimeIntervalNHoursAgo(N: 24)
-                var startIndex = 0
-                while startIndex < bgData.count, bgData[startIndex].date < oneDayAgo {
-                    startIndex += 1
-                }
-                lastDayOfData = Array(bgData.dropFirst(startIndex))
-            }
+    /// Start of the period both home screen stats cover: the last 24 hours, or since
+    /// midnight when chosen in Settings. Midnight follows the display time zone, so a
+    /// Time Zone Override is respected.
+    func homeStatsPeriodStart() -> TimeInterval {
+        if Storage.shared.statsSinceMidnight.value {
+            return dateTimeUtils.displayCalendar().startOfDay(for: Date()).timeIntervalSince1970
+        }
+        return dateTimeUtils.getTimeIntervalNHoursAgo(N: 24)
+    }
 
-            let stats = StatsData(bgData: lastDayOfData)
+    func updateStats() {
+        let periodStart = homeStatsPeriodStart()
+        let periodData = bgData.filter { $0.date >= periodStart }
+
+        if periodData.isEmpty {
+            // Nothing in the period yet (e.g. just after midnight): show placeholders
+            // rather than the previous period's numbers.
+            statsDisplayModel.lowPercent = "--"
+            statsDisplayModel.inRangePercent = "--"
+            statsDisplayModel.highPercent = "--"
+            statsDisplayModel.avgBG = "--"
+            statsDisplayModel.estA1C = "--"
+            statsDisplayModel.stdDev = "--"
+            statsDisplayModel.pieLow = 0
+            statsDisplayModel.pieRange = 0
+            statsDisplayModel.pieHigh = 0
+        } else {
+            let stats = StatsData(bgData: periodData)
 
             statsDisplayModel.lowPercent = String(format: "%.1f%%", stats.percentLow)
             statsDisplayModel.inRangePercent = String(format: "%.1f%%", stats.percentRange)
@@ -48,17 +61,17 @@ extension MainViewController {
             statsDisplayModel.pieRange = Double(stats.percentRange)
             statsDisplayModel.pieHigh = Double(stats.percentHigh)
         }
-        updateTIRBand()
+        updateTIRBand(periodStart: periodStart)
     }
 
-    /// Today's (since midnight) range distribution for the Time in Range band.
+    /// Range distribution for the Time in Range band over the same period as the
+    /// statistics box (last 24 hours, or today since midnight).
     /// Very low is below 54 mg/dL and very high above 250 mg/dL; low, in range
     /// and high follow the Range Mode chosen in Settings (TIR, TITR or Custom).
-    func updateTIRBand() {
+    func updateTIRBand(periodStart: TimeInterval) {
         let thresholds = UnitSettingsStore.shared.effectiveThresholds()
-        let startOfDay = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
         let values = bgData
-            .filter { $0.date >= startOfDay && $0.sgv > 0 }
+            .filter { $0.date >= periodStart && $0.sgv > 0 }
             .map { Double($0.sgv) }
 
         switch UnitSettingsStore.shared.timeInRangeMode {
@@ -81,5 +94,6 @@ extension MainViewController {
         statsDisplayModel.bandHighPct = percentages.high
         statsDisplayModel.bandVeryHighPct = percentages.veryHigh
         statsDisplayModel.bandHasData = !values.isEmpty
+        statsDisplayModel.bandPeriod = Storage.shared.statsSinceMidnight.value ? "today" : "last 24h"
     }
 }

@@ -52,8 +52,8 @@ extension MainViewController {
     }
 
     /// Today's (since midnight) range distribution for the Time in Range band.
-    /// Very low is below 54 mg/dL; low, in range and high follow the Range Mode
-    /// chosen in Settings (TIR, TITR, TING or Custom).
+    /// Very low is below 54 mg/dL and very high above 250 mg/dL; low, in range
+    /// and high follow the Range Mode chosen in Settings (TIR, TITR, TING or Custom).
     func updateTIRBand() {
         let thresholds = UnitSettingsStore.shared.effectiveThresholds()
         let startOfDay = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
@@ -68,22 +68,19 @@ extension MainViewController {
         case .custom: statsDisplayModel.bandTitle = "Time in Range"
         }
 
-        guard !values.isEmpty else {
-            statsDisplayModel.bandHasData = false
-            statsDisplayModel.bandVeryLowPct = 0
-            statsDisplayModel.bandLowPct = 0
-            statsDisplayModel.bandInRangePct = 0
-            statsDisplayModel.bandHighPct = 0
-            return
-        }
+        let percentages = TIRCalculator.calculatePercentages(
+            readings: values,
+            veryLowThreshold: 54.0,
+            lowThreshold: thresholds.low,
+            highThreshold: thresholds.high,
+            veryHighThreshold: 250.0
+        )
 
-        let total = Double(values.count)
-        func pct(_ count: Int) -> Double { Double(count) / total * 100 }
-
-        statsDisplayModel.bandVeryLowPct = pct(values.filter { $0 < 54 }.count)
-        statsDisplayModel.bandLowPct = pct(values.filter { $0 >= 54 && $0 < thresholds.low }.count)
-        statsDisplayModel.bandInRangePct = pct(values.filter { $0 >= thresholds.low && $0 <= thresholds.high }.count)
-        statsDisplayModel.bandHighPct = pct(values.filter { $0 > thresholds.high }.count)
-        statsDisplayModel.bandHasData = true
+        statsDisplayModel.bandVeryLowPct = percentages.veryLow
+        statsDisplayModel.bandLowPct = percentages.low
+        statsDisplayModel.bandInRangePct = percentages.inRange
+        statsDisplayModel.bandHighPct = percentages.high
+        statsDisplayModel.bandVeryHighPct = percentages.veryHigh
+        statsDisplayModel.bandHasData = !values.isEmpty
     }
 }

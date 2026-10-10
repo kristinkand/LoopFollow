@@ -23,4 +23,5 @@ class StatsDisplayModel: ObservableObject {
     @Published var bandLowPct: Double = 0
     @Published var bandInRangePct: Double = 0
     @Published var bandHighPct: Double = 0
+    @Published var bandVeryHighPct: Double = 0
 }

@@ -184,11 +184,7 @@ final class LiveActivityManager {
         let provider = StorageCurrentGlucoseStateProvider()
         guard let snapshot = GlucoseSnapshotBuilder.build(from: provider) else { return }
 
-        LAAppGroupSettings.setThresholds(
-            lowMgdl: Storage.shared.lowLine.value,
-            highMgdl: Storage.shared.highLine.value,
-            targetMgdl: Storage.shared.targetLine.value,
-        )
+        Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
 
         seq += 1
@@ -642,11 +638,7 @@ final class LiveActivityManager {
 
         let provider = StorageCurrentGlucoseStateProvider()
         if let snapshot = GlucoseSnapshotBuilder.build(from: provider) {
-            LAAppGroupSettings.setThresholds(
-                lowMgdl: Storage.shared.lowLine.value,
-                highMgdl: Storage.shared.highLine.value,
-                targetMgdl: Storage.shared.targetLine.value,
-            )
+            Self.writeRangeModeThresholds()
             LAAppGroupSettings.setDisplayName(
                 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "LoopFollow",
                 show: Storage.shared.showDisplayName.value
@@ -654,6 +646,20 @@ final class LiveActivityManager {
             GlucoseSnapshotStore.shared.save(snapshot)
         }
         startIfNeeded()
+    }
+
+    static let rangeModeChangedReason = "range mode changed"
+
+    /// Writes the low/high/target of the selected Range Mode (TIR, TITR, TING or
+    /// Custom) for the Live Activity, so it colors readings like the chart, BG value
+    /// and home screen widget instead of always using the Custom lines.
+    static func writeRangeModeThresholds() {
+        let thresholds = UnitSettingsStore.shared.effectiveThresholds()
+        LAAppGroupSettings.setThresholds(
+            lowMgdl: thresholds.low,
+            highMgdl: thresholds.high,
+            targetMgdl: thresholds.target
+        )
     }
 
     func refreshFromCurrentState(reason: String) {
@@ -1050,11 +1056,7 @@ final class LiveActivityManager {
         let snapshotUnchanged = GlucoseSnapshotStore.shared.load() == snapshot
 
         // Store + Watch: always update, independent of LA state.
-        LAAppGroupSettings.setThresholds(
-            lowMgdl: Storage.shared.lowLine.value,
-            highMgdl: Storage.shared.highLine.value,
-            targetMgdl: Storage.shared.targetLine.value,
-        )
+        Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
         WatchConnectivityManager.shared.send(snapshot: snapshot)
 
@@ -1067,7 +1069,9 @@ final class LiveActivityManager {
             LogManager.shared.log(category: .general, message: "[LA] refresh: LA update skipped — dismissedByUser=true reason=\(reason)")
             return
         }
-        guard !snapshotUnchanged || forceRefreshNeeded else { return }
+        // A Range Mode change recolors the Live Activity even though the BG data is unchanged.
+        let colorsChanged = reason == Self.rangeModeChangedReason
+        guard !snapshotUnchanged || forceRefreshNeeded || colorsChanged else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             LogManager.shared.log(category: .general, message: "[LA] refresh: LA update skipped — areActivitiesEnabled=false reason=\(reason)")
             return

@@ -76,6 +76,15 @@ enum WidgetBGStore {
         }
     }
 
+    /// Asks WidgetKit to redraw the widget even when the data is unchanged. Use when
+    /// the app comes to or leaves the foreground: reloads are free then, and this
+    /// revives a widget whose timeline has run out while refreshes were rationed.
+    static func reloadWidget() {
+        #if os(iOS)
+            WidgetCenter.shared.reloadTimelines(ofKind: kind)
+        #endif
+    }
+
     // MARK: - Read (widget)
 
     static func load() -> WidgetBGData? {

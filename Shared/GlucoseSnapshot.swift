@@ -131,6 +131,10 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
     /// True when LoopFollow detects the loop has not reported in 15+ minutes (Nightscout only).
     let isNotLooping: Bool
 
+    /// CGM state reported after the newest reading, e.g. "Temporary sensor
+    /// issue at 22:33" (nil while readings flow).
+    let cgmSensorState: String?
+
     // MARK: - Renewal
 
     /// True when the Live Activity is within renewalWarning seconds of its renewal deadline.
@@ -172,6 +176,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         history: [LAHistoryPoint] = [],
         unit: Unit,
         isNotLooping: Bool,
+        cgmSensorState: String? = nil,
         showRenewalOverlay: Bool = false,
     ) {
         self.glucose = glucose
@@ -206,6 +211,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         self.history = history
         self.unit = unit
         self.isNotLooping = isNotLooping
+        self.cgmSensorState = cgmSensorState
         self.showRenewalOverlay = showRenewalOverlay
     }
 
@@ -253,6 +259,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
             history: history,
             unit: unit,
             isNotLooping: isNotLooping,
+            cgmSensorState: cgmSensorState,
             showRenewalOverlay: value,
         )
     }
@@ -293,6 +300,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         try container.encode(history, forKey: .history)
         try container.encode(unit, forKey: .unit)
         try container.encode(isNotLooping, forKey: .isNotLooping)
+        try container.encodeIfPresent(cgmSensorState, forKey: .cgmSensorState)
         try container.encode(showRenewalOverlay, forKey: .showRenewalOverlay)
     }
 
@@ -330,6 +338,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         history = try container.decodeIfPresent([LAHistoryPoint].self, forKey: .history) ?? []
         unit = try container.decode(Unit.self, forKey: .unit)
         isNotLooping = try container.decodeIfPresent(Bool.self, forKey: .isNotLooping) ?? false
+        cgmSensorState = try container.decodeIfPresent(String.self, forKey: .cgmSensorState)
         showRenewalOverlay = try container.decodeIfPresent(Bool.self, forKey: .showRenewalOverlay) ?? false
     }
 
@@ -340,7 +349,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         case recBolus, battery, pumpBattery, basalRate, pumpReservoirU
         case autosens, tdd, targetLowMgdl, targetHighMgdl, isfMgdlPerU, carbRatio, carbsToday
         case profileName, sageInsertTime, cageInsertTime, iageInsertTime, minBgMgdl, maxBgMgdl
-        case unit, isNotLooping, showRenewalOverlay
+        case unit, isNotLooping, cgmSensorState, showRenewalOverlay
         case history
     }
 }

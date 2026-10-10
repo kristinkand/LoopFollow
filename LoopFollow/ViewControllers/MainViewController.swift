@@ -99,6 +99,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     var resumeGraphData: [DataStructs.timestampOnlyStruct] = []
     var sensorStartGraphData: [DataStructs.timestampOnlyStruct] = []
     var noteGraphData: [DataStructs.noteStruct] = []
+    var cgmSensorStates: [CGMSensorState] = []
     var deviceBatteryData: [DataStructs.batteryStruct] = []
     var lastCalDate: Double = 0
     var latestLoopStatusString = ""
@@ -291,6 +292,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
                 self?.updateBGGraphSettings()
                 self?.updateBGGraph()
                 self?.updateStats()
+                #if !targetEnvironment(macCatalyst)
+                    // Recolor the Live Activity for the new range right away.
+                    LiveActivityManager.shared.refreshFromCurrentState(reason: LiveActivityManager.rangeModeChangedReason)
+                #endif
             }
             .store(in: &cancellables)
 
@@ -588,6 +593,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appMovedToBackground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(
             category: .general,
             message: "App moved to background (refreshType=\(Storage.shared.backgroundRefreshType.value.rawValue), lowPowerMode=\(ProcessInfo.processInfo.isLowPowerModeEnabled), backgroundRefreshStatus=\(Self.describe(UIApplication.shared.backgroundRefreshStatus)))"
@@ -601,6 +610,13 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
 
         if Storage.shared.backgroundRefreshType.value == .silentTune {
             backgroundTask.startBackgroundTask()
+            BackgroundRefreshManager.shared.scheduleRefresh()
+        }
+
+        // Bluetooth heartbeat missing? Keep LoopFollow running with the silent tune
+        // until a heartbeat arrives again. The refresh request lets iOS re-check later.
+        if HeartbeatAudioFallback.shared.isEnabled {
+            HeartbeatAudioFallback.shared.evaluate(reason: "app moved to background")
             BackgroundRefreshManager.shared.scheduleRefresh()
         }
 
@@ -716,6 +732,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appCameToForeground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(category: .general, message: "App came to foreground")
 
         // BFU recovery (StorageReadiness.recover) is driven by AppDelegate before this
@@ -728,6 +748,9 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         if Storage.shared.backgroundRefreshType.value == .silentTune {
             backgroundTask.stopBackgroundTask()
         }
+
+        // Not needed while the app is open; re-checked when it goes to the background.
+        HeartbeatAudioFallback.shared.stop(reason: "app in foreground")
 
         if Storage.shared.backgroundRefreshType.value != .none {
             BackgroundAlertManager.shared.stopBackgroundAlert()
@@ -1249,7 +1272,9 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
 extension MainViewController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_: AVSpeechSynthesizer, didFinish _: AVSpeechUtterance) {
         let appState = UIApplication.shared.applicationState
+        // The heartbeat fallback plays the same silent tune, so it must not be cut off either.
         let isSilentTuneMode = Storage.shared.backgroundRefreshType.value == .silentTune
+            || HeartbeatAudioFallback.shared.isActive
 
         if isSilentTuneMode, appState == .background {
             LogManager.shared.log(category: .general, message: "Silent tune active in background; not deactivating session.", isDebug: true)

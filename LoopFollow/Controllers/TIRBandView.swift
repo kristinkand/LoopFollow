@@ -52,7 +52,7 @@ struct TIRBandView: View {
                         .fontWeight(.bold)
                         .fontDesign(.rounded)
                         .foregroundStyle(.primary)
-                    (Text(model.bandTitle).fontWeight(.semibold) + Text(" today"))
+                    (Text(model.bandTitle).fontWeight(.semibold) + Text(" " + model.bandPeriod))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

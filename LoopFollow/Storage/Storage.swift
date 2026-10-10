@@ -80,6 +80,9 @@ class Storage {
     var showStats = StorageValue<Bool>(key: "showStats", defaultValue: true)
     /// Show stats as a Trio-style Time in Range band instead of the statistics box.
     var showTIRBand = StorageValue<Bool>(key: "showTIRBand", defaultValue: true)
+    /// Period both home screen stats (statistics box and Time in Range band) cover:
+    /// the last 24 hours, or today since midnight.
+    var statsSinceMidnight = StorageValue<Bool>(key: "statsSinceMidnight", defaultValue: false)
     var useIFCC = StorageValue<Bool>(key: "useIFCC", defaultValue: false)
     var showSmallGraph = StorageValue<Bool>(key: "showSmallGraph", defaultValue: true)
     var screenlockSwitchState = StorageValue<Bool>(key: "screenlockSwitchState", defaultValue: true)
@@ -336,6 +339,7 @@ class Storage {
         appearanceMode.reload()
         showStats.reload()
         showTIRBand.reload()
+        statsSinceMidnight.reload()
         useIFCC.reload()
         showSmallGraph.reload()
         screenlockSwitchState.reload()

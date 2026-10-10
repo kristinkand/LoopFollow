@@ -1,4 +1,4 @@
-//LoopFollow
+// LoopFollow
 // TRCCommandType.swift
 
 import Foundation

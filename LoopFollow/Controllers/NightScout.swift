@@ -29,7 +29,7 @@ extension MainViewController {
         var basalRate: Double
         var date: TimeInterval
     }
-    
+
     // NS Target Data Struct
     struct targetGraphStruct: Codable {
         var targetHigh: Double

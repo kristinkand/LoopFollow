@@ -1,4 +1,4 @@
-//LoopFollow
+// LoopFollow
 // BGChartModel.swift
 
 import Foundation
@@ -89,7 +89,7 @@ final class BGChartModel: ObservableObject {
         let value: Double
         var id: TimeInterval { date.timeIntervalSince1970 }
     }
-    
+
     struct BandRect: Identifiable {
         let start: Date
         let end: Date
@@ -143,7 +143,7 @@ final class BGChartModel: ObservableObject {
     @Published var basal: [BasalStep] = []
     @Published var basalScheduled: [ScheduledBasalPoint] = []
     @Published var targetScheduled: [ScheduledTargetPoint] = []
-    
+
     @Published var boluses: [TreatmentPoint] = []
     @Published var carbs: [TreatmentPoint] = []
     @Published var smbs: [TreatmentPoint] = []
@@ -546,7 +546,7 @@ final class BGChartModel: ObservableObject {
         basalScheduled = (showBasal ? vc.basalScheduleData : []).map {
             ScheduledBasalPoint(date: Date(timeIntervalSince1970: $0.date), rate: $0.basalRate)
         }
-        
+
         targetScheduled = (showTargetLine ? vc.targetScheduleData : []).map {
             ScheduledTargetPoint(date: Date(timeIntervalSince1970: $0.date), value: $0.targetHigh)
         }

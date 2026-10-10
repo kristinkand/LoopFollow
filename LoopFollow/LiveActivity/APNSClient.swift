@@ -198,7 +198,7 @@ class APNSClient {
         fittingPayload { historyStride in
             guard let contentStateDict = self.contentStateDictionary(state: state, historyStride: historyStride) else { return nil }
             return [
-            "aps": [
+                "aps": [
                 "timestamp": Int(Date().timeIntervalSince1970),
                 "event": "start",
                 "stale-date": Int(staleDate.timeIntervalSince1970),

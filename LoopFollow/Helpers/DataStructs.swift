@@ -16,7 +16,7 @@ class DataStructs {
         var startDate: TimeInterval
         var endDate: TimeInterval
     }
-    
+
     struct targetProfileSegment: Codable {
         var targetHigh: Double
         var startDate: TimeInterval

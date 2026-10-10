@@ -1433,7 +1433,7 @@ private struct BGChartCanvas: View, Equatable {
             .foregroundStyle(Color.blue.opacity(0.8))
         }
     }
-    
+
     @ChartContentBuilder
     private var scheduledTargetMarks: some ChartContent {
         ForEach(windowedLine(model.targetScheduled) { $0.date }) { pt in

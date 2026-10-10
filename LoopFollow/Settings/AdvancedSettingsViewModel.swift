@@ -22,7 +22,7 @@ class AdvancedSettingsViewModel: ObservableObject {
             Observable.shared.chartSettingsChanged.value = true
         }
     }
-    
+
     @Published var graphTargetLine: Bool {
         didSet {
             Storage.shared.graphTargetLine.value = graphTargetLine

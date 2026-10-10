@@ -1540,7 +1540,7 @@ class TreatmentsViewModel: ObservableObject {
 
                 let subtitleParts = [
                     isWeekendProfile ? "Profile" : "Override",
-                    durationMinutes > 0 ? "\(Int(durationMinutes))m" : nil
+                    durationMinutes > 0 ? "\(Int(durationMinutes))m" : nil,
                 ].compactMap { $0 }
                 let subtitle = subtitleParts.joined(separator: " • ")
                 let title = reason.isEmpty ? (isWeekendProfile ? "Profile" : "Temporary Override") : reason

@@ -329,7 +329,7 @@ private struct MetricBlock: View {
                 .allowsTightening(true)
                 .layoutPriority(1)
         }
-        .frame(width: 72, alignment: .leading)
+        .frame(maxWidth: 72, alignment: .leading)
     }
 }
 
@@ -367,7 +367,7 @@ private struct SlotView: View {
     var body: some View {
         if option == .none {
             Color.clear
-                .frame(width: 72, height: 36)
+                .frame(maxWidth: 72, minHeight: 36, maxHeight: 36)
         } else {
             MetricBlock(label: option.gridLabel, value: slotFormattedValue(option: option, snapshot: snapshot))
         }

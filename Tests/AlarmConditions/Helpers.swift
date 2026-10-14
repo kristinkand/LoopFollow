@@ -29,6 +29,15 @@ extension Alarm {
         return alarm
     }
 
+    static func missedBolus(delay: Int = 15, prebolus: Int = 15, minBolus: Double = 0.1, minCarbs: Double = 4) -> Self {
+        var alarm = Alarm(type: .missedBolus)
+        alarm.monitoringWindow = delay
+        alarm.predictiveMinutes = prebolus
+        alarm.delta = minBolus
+        alarm.threshold = minCarbs
+        return alarm
+    }
+
     static func low(belowBG: Double?, predictiveMinutes: Int? = nil, persistentMinutes: Int? = nil) -> Self {
         var alarm = Alarm(type: .low)
         alarm.belowBG = belowBG
@@ -228,7 +237,7 @@ extension AlarmData {
         )
     }
 
-    static func withCarbs(_ carbs: [CarbSample]) -> Self {
+    static func withCarbs(_ carbs: [CarbSample], boluses: [BolusEntry] = []) -> Self {
         AlarmData(
             bgReadings: [],
             predictionData: [],
@@ -244,7 +253,7 @@ extension AlarmData {
             pumpInsertTime: nil,
             latestPumpVolume: nil,
             IOB: nil,
-            recentBoluses: [],
+            recentBoluses: boluses,
             latestBattery: nil,
             latestBatteryIsCharging: nil,
             latestPumpBattery: nil,

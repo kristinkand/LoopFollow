@@ -213,7 +213,7 @@ private struct LockScreenLiveActivityView: View {
                         .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
                 }
-                .layoutPriority(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 LAHistoryGraphView(history: s.history)
                     .frame(maxWidth: .infinity)

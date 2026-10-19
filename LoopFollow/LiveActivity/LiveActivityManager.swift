@@ -1074,7 +1074,6 @@ final class LiveActivityManager {
         // Store + Watch: always update, independent of LA state.
         Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
-        WatchConnectivityManager.shared.send(snapshot: snapshot)
 
         // LA update: gated on LA being active, snapshot having changed, and activities enabled.
         if !Storage.shared.laEnabled.value {

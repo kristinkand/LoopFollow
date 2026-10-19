@@ -673,6 +673,7 @@ final class LiveActivityManager {
             DispatchQueue.main.async { self.refreshFromCurrentState(reason: reason) }
             return
         }
+        WatchSessionManager.shared.requestUpdate(reason: reason)
         refreshCoalescer.request(reason: reason)
     }
 
@@ -1071,7 +1072,7 @@ final class LiveActivityManager {
         // Capture dedup result BEFORE saving so the store comparison is valid.
         let snapshotUnchanged = GlucoseSnapshotStore.shared.load() == snapshot
 
-        // Store + Watch: always update, independent of LA state.
+        // Store: always update, independent of LA state.
         Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
 

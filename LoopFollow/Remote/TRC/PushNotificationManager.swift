@@ -59,7 +59,7 @@ class PushNotificationManager {
             user: user,
             commandType: .startWeekendProfile,
             timestamp: Date().timeIntervalSince1970,
-            returnNotification: createReturnNotificationInfo()
+            returnNotification: ReturnNotificationInfo.loopFollow()
         )
         sendEncryptedCommand(payload: payload, completion: completion)
     }
@@ -69,7 +69,7 @@ class PushNotificationManager {
             user: user,
             commandType: .stopWeekendProfile,
             timestamp: Date().timeIntervalSince1970,
-            returnNotification: createReturnNotificationInfo()
+            returnNotification: ReturnNotificationInfo.loopFollow()
         )
         sendEncryptedCommand(payload: payload, completion: completion)
     }

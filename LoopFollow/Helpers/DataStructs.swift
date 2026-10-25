@@ -43,7 +43,7 @@ class DataStructs {
     }
 
     // NS Override Data  Struct
-    struct overrideStruct: Codable {
+    struct overrideStruct {
         var insulNeedsScaleFactor: Double
         var date: TimeInterval
         var endDate: TimeInterval
@@ -56,14 +56,18 @@ class DataStructs {
         /// clamped to the graph horizon. Nil when the override runs
         /// indefinitely, so the end is not known in advance.
         var scheduledEndDate: TimeInterval?
+        /// The Treatments list entry this band opens.
+        var detail: Treatment? = nil
     }
 
-    struct tempTargetStruct: Codable {
+    struct tempTargetStruct {
         var date: TimeInterval
         var endDate: TimeInterval
         var duration: Double
         var correctionRange: [Int]
         var enteredBy: String
         var reason: String
+        /// The Treatments list entry this band opens.
+        var detail: Treatment? = nil
     }
 }

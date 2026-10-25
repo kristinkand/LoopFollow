@@ -11,8 +11,8 @@ struct StorageCurrentGlucoseStateProvider: CurrentGlucoseStateProviding {
     // MARK: - Core Glucose
 
     var glucoseMgdl: Double? {
-        guard let bg = Observable.shared.bg.value, bg > 0 else { return nil }
-        return Double(bg)
+        guard let bg = Storage.shared.lastBgMgdl.value, bg > 0 else { return nil }
+        return bg
     }
 
     var deltaMgdl: Double? {
@@ -156,5 +156,11 @@ struct StorageCurrentGlucoseStateProvider: CurrentGlucoseStateProviding {
             // bad creds, rate-limited) — that is genuinely user-actionable.
             return Storage.shared.laRenewalFailed.value
         #endif
+    }
+
+    // MARK: - History
+
+    var history: [LAHistoryPoint] {
+        Storage.shared.lastBgHistory.value
     }
 }

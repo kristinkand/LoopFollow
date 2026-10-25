@@ -74,6 +74,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     var basalProfile: [basalProfileStruct] = []
     var basalData: [basalGraphStruct] = []
     var basalScheduleData: [basalGraphStruct] = []
+    var targetScheduleData: [targetGraphStruct] = []
     var bolusData: [bolusGraphStruct] = []
     var smbData: [bolusGraphStruct] = []
     var carbData: [carbGraphStruct] = []
@@ -153,6 +154,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         view.backgroundColor = .systemBackground
 
         infoManager = InfoManager()
+        WatchSessionManager.shared.observe(infoManager, stats: statsDisplayModel)
 
         let mainView = MainHomeView(
             chartModel: chartModel,
@@ -278,7 +280,12 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             Storage.shared.units.$value.map { _ in () }.eraseToAnyPublisher(),
             Storage.shared.useIFCC.$value.map { _ in () }.eraseToAnyPublisher(),
             Storage.shared.showGMI.$value.map { _ in () }.eraseToAnyPublisher(),
-            Storage.shared.showStdDev.$value.map { _ in () }.eraseToAnyPublisher()
+            Storage.shared.showStdDev.$value.map { _ in () }.eraseToAnyPublisher(),
+            Storage.shared.statsSinceMidnight.$value.map { _ in () }.eraseToAnyPublisher(),
+            Storage.shared.lowLine.$value.map { _ in () }.eraseToAnyPublisher(),
+            Storage.shared.highLine.$value.map { _ in () }.eraseToAnyPublisher(),
+            Storage.shared.graphTimeZoneEnabled.$value.map { _ in () }.eraseToAnyPublisher(),
+            Storage.shared.graphTimeZoneIdentifier.$value.map { _ in () }.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in
@@ -291,7 +298,11 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             .sink { [weak self] _ in
                 self?.updateBGGraphSettings()
                 self?.updateBGGraph()
-                LiveActivityManager.shared.refreshFromCurrentState(reason: "range mode changed")
+                self?.updateStats()
+                #if !targetEnvironment(macCatalyst)
+                    // Recolor the Live Activity for the new range right away.
+                    LiveActivityManager.shared.refreshFromCurrentState(reason: LiveActivityManager.rangeModeChangedReason)
+                #endif
             }
             .store(in: &cancellables)
 
@@ -589,6 +600,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appMovedToBackground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(
             category: .general,
             message: "App moved to background (refreshType=\(Storage.shared.backgroundRefreshType.value.rawValue), lowPowerMode=\(ProcessInfo.processInfo.isLowPowerModeEnabled), backgroundRefreshStatus=\(Self.describe(UIApplication.shared.backgroundRefreshStatus)), \(ExitDiagnostics.memoryDescription()))"
@@ -616,6 +631,13 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         }
 
         if mode == .silentTune || Storage.shared.backgroundRefreshType.value == .hub {
+            BackgroundRefreshManager.shared.scheduleRefresh()
+        }
+
+        // Bluetooth heartbeat missing? Keep LoopFollow running with the silent tune
+        // until a heartbeat arrives again. The refresh request lets iOS re-check later.
+        if HeartbeatAudioFallback.shared.isEnabled {
+            HeartbeatAudioFallback.shared.evaluate(reason: "app moved to background")
             BackgroundRefreshManager.shared.scheduleRefresh()
         }
 
@@ -747,6 +769,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appCameToForeground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(category: .general, message: "App came to foreground")
 
         // BFU recovery (StorageReadiness.recover) is driven by AppDelegate before this
@@ -761,6 +787,9 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         if selected == .silentTune || selected == .hub {
             backgroundTask.stopBackgroundTask()
         }
+
+        // Not needed while the app is open; re-checked when it goes to the background.
+        HeartbeatAudioFallback.shared.stop(reason: "app in foreground")
 
         if selected.keepsAppRunning || selected == .hub {
             BackgroundAlertManager.shared.stopBackgroundAlert()
@@ -882,13 +911,12 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             let latestBG = bgData[bgData.count - 1].sgv
             if Storage.shared.colorBGText.value {
                 let thresholds = UnitSettingsStore.shared.effectiveThresholds()
-                if Double(latestBG) >= thresholds.high {
-                    Observable.shared.bgTextColor.value = .yellow
-                } else if Double(latestBG) <= thresholds.low {
-                    Observable.shared.bgTextColor.value = .red
-                } else {
-                    Observable.shared.bgTextColor.value = .green
-                }
+                Observable.shared.bgTextColor.value = dynamicGlucoseColor(
+                    glucoseValue: Double(latestBG),
+                    low: thresholds.low,
+                    target: thresholds.target,
+                    high: thresholds.high
+                )
             } else {
                 Observable.shared.bgTextColor.value = .primary
             }
@@ -1297,7 +1325,9 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
 extension MainViewController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_: AVSpeechSynthesizer, didFinish _: AVSpeechUtterance) {
         let appState = UIApplication.shared.applicationState
+        // The heartbeat fallback plays the same silent tune, so it must not be cut off either.
         let isSilentTuneMode = BackgroundRefreshType.inEffect == .silentTune
+            || HeartbeatAudioFallback.shared.isActive
 
         if isSilentTuneMode, appState == .background {
             LogManager.shared.log(category: .general, message: "Silent tune active in background; not deactivating session.", isDebug: true)

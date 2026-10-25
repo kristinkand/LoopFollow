@@ -28,6 +28,7 @@ struct UnitsConfigurationView: View {
     @State private var glucoseUnit = UnitSettingsStore.shared.glucoseUnit
     @State private var lowValue = Storage.shared.lowLine.value
     @State private var highValue = Storage.shared.highLine.value
+    @State private var targetValue = Storage.shared.targetLine.value
 
     /// Formats a mg/dL threshold pair in the currently selected glucose unit,
     /// e.g. "70–180 mg/dL" or "3.9–10.0 mmol/L".
@@ -71,11 +72,23 @@ struct UnitsConfigurationView: View {
                 Picker("Range Mode", selection: $rangeMode) {
                     Text("TIR").tag(TimeInRangeDisplayMode.tir)
                     Text("TITR").tag(TimeInRangeDisplayMode.titr)
+                    Text("TING").tag(TimeInRangeDisplayMode.ting)
                     Text("Custom").tag(TimeInRangeDisplayMode.custom)
                 }
                 .pickerStyle(.segmented)
                 .onChange(of: rangeMode) { newValue in
                     UnitSettingsStore.shared.timeInRangeMode = newValue
+                    Observable.shared.chartSettingsChanged.value = true
+                }
+
+                BGPicker(
+                    title: "Target",
+                    range: 80 ... 120,
+                    value: $targetValue
+                )
+                .id(glucoseUnit)
+                .onChange(of: targetValue) { newValue in
+                    Storage.shared.targetLine.value = newValue
                     Observable.shared.chartSettingsChanged.value = true
                 }
 
@@ -104,7 +117,7 @@ struct UnitsConfigurationView: View {
             } header: {
                 Text("Range")
             } footer: {
-                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nCustom — set your own low and high.")
+                Text("TIR — Time in Range, the share of readings within \(rangeBounds(70, 180)).\nTITR — Time in Tight Range, within \(rangeBounds(70, 140)).\nTING — Time in Normoglycemia, within \(rangeBounds(63, 140)).\nCustom — set your own low and high.\nTarget — the center point for the dynamic color gradient on the graph and BG value.")
             }
 
             Section {

@@ -192,7 +192,6 @@ private struct LockScreenLiveActivityView: View {
 
     var body: some View {
         let s = state.snapshot
-        let slotConfig = LAAppGroupSettings.slots()
 
         VStack(spacing: 6) {
             HStack(spacing: 12) {
@@ -201,13 +200,13 @@ private struct LockScreenLiveActivityView: View {
                         Text(LAFormat.glucose(s))
                             .font(.system(size: 46, weight: .bold, design: .rounded))
                             .monospacedDigit()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(LAColors.keyline(for: s))
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
                             .allowsTightening(true)
                             .layoutPriority(3)
 
-                        Text(LAFormat.trendArrow(s))
+                        Text(LAFormat.trendEmoji(s))
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
@@ -222,22 +221,9 @@ private struct LockScreenLiveActivityView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Rectangle()
-                    .fill(Color.white.opacity(0.20))
-                    .frame(width: 1)
-                    .padding(.vertical, 8)
-
-                VStack(spacing: 8) {
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[0], snapshot: s)
-                        SlotView(option: slotConfig[1], snapshot: s)
-                    }
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[2], snapshot: s)
-                        SlotView(option: slotConfig[3], snapshot: s)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                LAHistoryGraphView(history: s.history)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 72)
             }
 
             ActiveAdjustmentsView(snapshot: s)
@@ -613,7 +599,7 @@ private struct DynamicIslandCompactLeadingView: View {
             Text(LAFormat.glucose(snapshot))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(LAColors.keyline(for: snapshot))
         }
     }
 }
@@ -629,7 +615,7 @@ private struct DynamicIslandMinimalView: View {
             Text(LAFormat.glucose(snapshot))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(LAColors.keyline(for: snapshot))
         }
     }
 }
@@ -692,6 +678,20 @@ private enum LAFormat {
         case .downSlight: "↘︎"
         case .down: "↓"
         case .downFast: "↓↓"
+        case .unknown: "–"
+        }
+    }
+
+    /// Lock Screen-only themed trend icon (see file header for the mapping).
+    static func trendEmoji(_ s: GlucoseSnapshot) -> String {
+        switch s.trend {
+        case .upFast: "🚀"
+        case .up: "🚀"
+        case .upSlight: "🛫"
+        case .flat: "🛸"
+        case .downSlight: "🛬"
+        case .down: "🪂"
+        case .downFast: "🪂"
         case .unknown: "–"
         }
     }
@@ -826,40 +826,62 @@ private enum LAFormat {
     }
 }
 
+// MARK: - Lock screen history graph
+
+/// Mini version of the main screen's BG graph for the Lock Screen widget.
+/// Colors each short line segment with the same dynamic gradient as the main
+/// chart and the glucose number, using each segment's midpoint value.
+private struct LAHistoryGraphView: View {
+    let history: [LAHistoryPoint]
+
+    var body: some View {
+        if history.count < 2 {
+            Color.clear
+        } else {
+            let t = LAAppGroupSettings.thresholdsMgdl()
+            let minDate = history.first!.d
+            let maxDate = history.last!.d
+            let dateRange = max(maxDate - minDate, 1)
+            let minValue = Double(history.map(\.v).min() ?? 0)
+            let maxValue = Double(history.map(\.v).max() ?? 1)
+            let valueRange = max(maxValue - minValue, 1)
+
+            Canvas { context, size in
+                for (a, b) in zip(history, history.dropFirst()) {
+                    let midValue = (Double(a.v) + Double(b.v)) / 2
+                    let x1 = size.width * CGFloat((a.d - minDate) / dateRange)
+                    let y1 = size.height * (1 - CGFloat((Double(a.v) - minValue) / valueRange))
+                    let x2 = size.width * CGFloat((b.d - minDate) / dateRange)
+                    let y2 = size.height * (1 - CGFloat((Double(b.v) - minValue) / valueRange))
+
+                    var segment = Path()
+                    segment.move(to: CGPoint(x: x1, y: y1))
+                    segment.addLine(to: CGPoint(x: x2, y: y2))
+
+                    context.stroke(
+                        segment,
+                        with: .color(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high)),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+                    )
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Threshold-driven colors
 
 private enum LAColors {
     static func backgroundTint(for snapshot: GlucoseSnapshot) -> Color {
         let mgdl = snapshot.glucose
         let t = LAAppGroupSettings.thresholdsMgdl()
-        let low = t.low
-        let high = t.high
-
-        if mgdl <= low {
-            let raw = 0.48 + (0.85 - 0.48) * ((low - mgdl) / max(low - 54.0, 1))
-            let opacity = min(max(raw, 0.48), 0.85)
-            return Color(uiColor: UIColor.systemRed).opacity(opacity)
-        } else if mgdl >= high {
-            let raw = 0.44 + (0.85 - 0.44) * ((mgdl - high) / max(324.0 - high, 1))
-            let opacity = min(max(raw, 0.44), 0.85)
-            return Color(uiColor: UIColor.systemOrange).opacity(opacity)
-        } else {
-            return Color(uiColor: UIColor.systemGreen).opacity(0.36)
-        }
+        let opacity: Double = (mgdl < t.low || mgdl > t.high) ? 0.8 : 0.6
+        return dynamicGlucoseColor(glucoseValue: mgdl, low: t.low, target: t.target, high: t.high).opacity(opacity)
     }
 
     static func keyline(for snapshot: GlucoseSnapshot) -> Color {
         let mgdl = snapshot.glucose
         let t = LAAppGroupSettings.thresholdsMgdl()
-        let low = t.low
-        let high = t.high
-
-        if mgdl <= low {
-            return Color(uiColor: UIColor.systemRed)
-        } else if mgdl >= high {
-            return Color(uiColor: UIColor.systemOrange)
-        } else {
-            return Color(uiColor: UIColor.systemGreen)
-        }
+        return dynamicGlucoseColor(glucoseValue: mgdl, low: t.low, target: t.target, high: t.high)
     }
 }

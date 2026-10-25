@@ -61,6 +61,9 @@ extension MainViewController {
                 LiveActivityManager.shared.refreshFromCurrentState(reason: "loopingResumed")
             #endif
         }
+
+        // Keep the widget's IOB in step with each loop cycle.
+        refreshHomeScreenWidget()
     }
 
     // NS Device Status Response Processor

@@ -83,5 +83,6 @@ extension MainViewController {
         #if !targetEnvironment(macCatalyst)
             LiveActivityManager.shared.refreshFromCurrentState(reason: "tempTargetChanged")
         #endif
+        refreshHomeScreenWidget()
     }
 }

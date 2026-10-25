@@ -9,12 +9,14 @@ struct BackgroundRefreshSettingsView: View {
     @State private var timer: Timer?
 
     @ObservedObject var bleManager = BLEManager.shared
+    @ObservedObject var silentTuneFallback = Storage.shared.bleSilentTuneFallback
 
     var body: some View {
         Form {
             refreshTypeSection
 
             if viewModel.backgroundRefreshType.isBluetooth {
+                fallbackSection
                 selectedDeviceSection
                 availableDevicesSection
             }
@@ -30,6 +32,14 @@ struct BackgroundRefreshSettingsView: View {
     }
 
     // MARK: - Subviews / Computed Properties
+
+    private var fallbackSection: some View {
+        Section {
+            Toggle("Silent Tune Fallback", isOn: $silentTuneFallback.value)
+        } footer: {
+            Text("If the heartbeat has stopped when LoopFollow next gets to run (for example when you open it from an \"App inactive\" notification), the silent tune keeps LoopFollow refreshing. It switches off by itself as soon as a heartbeat arrives again.")
+        }
+    }
 
     private var refreshTypeSection: some View {
         Section {

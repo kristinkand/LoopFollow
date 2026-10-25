@@ -17,6 +17,9 @@ class Observable {
 
     /// End of the active override as Unix epoch seconds; nil = no override or indefinite.
     var overrideEndAt = ObservableValue<TimeInterval?>(default: nil)
+    /// True while the currently active override entry was posted by Trio's Weekend Profile
+    /// feature (enteredBy == "Trio Weekend Profile") rather than a real Override.
+    var weekendProfileActive = ObservableValue<Bool>(default: false)
     /// End of the active temp target as Unix epoch seconds; nil = no active temp target.
     var tempTargetEndAt = ObservableValue<TimeInterval?>(default: nil)
 
@@ -36,6 +39,9 @@ class Observable {
     var predictionColor = ObservableValue<Color>(default: .purple)
 
     var currentAlarm = ObservableValue<UUID?>(default: nil)
+    /// Replaces the current alarm's name on screen when the firing needs its
+    /// own wording (e.g. an end alarm's early warning); nil shows the name.
+    var currentAlarmTitleOverride = ObservableValue<String?>(default: nil)
     var alarmSoundPlaying = ObservableValue<Bool>(default: false)
 
     var debug = ObservableValue<Bool>(default: false)

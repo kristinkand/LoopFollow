@@ -85,6 +85,12 @@ final class BGChartModel: ObservableObject {
         var id: TimeInterval { date.timeIntervalSince1970 }
     }
 
+    struct ScheduledTargetPoint: Identifiable {
+        let date: Date
+        let value: Double
+        var id: TimeInterval { date.timeIntervalSince1970 }
+    }
+
     struct BandRect: Identifiable {
         let start: Date
         let end: Date
@@ -92,6 +98,9 @@ final class BGChartModel: ObservableObject {
         let yTop: Double
         let label: String
         let pillText: String
+        /// Overrides normally render in `overrideColor`; a band entered by Trio's
+        /// Weekend Profile feature overrides that with mint, matching its color in Trio.
+        let color: Color
         /// The Treatments list entry the pill links to.
         var detail: Treatment? = nil
         var id: String { "\(start.timeIntervalSince1970)-\(end.timeIntervalSince1970)" }
@@ -136,6 +145,7 @@ final class BGChartModel: ObservableObject {
 
     @Published var basal: [BasalStep] = []
     @Published var basalScheduled: [ScheduledBasalPoint] = []
+    @Published var targetScheduled: [ScheduledTargetPoint] = []
 
     @Published var boluses: [TreatmentPoint] = []
     @Published var carbs: [TreatmentPoint] = []
@@ -272,14 +282,8 @@ final class BGChartModel: ObservableObject {
         return finalMessage.isEmpty ? nil : finalMessage
     }
 
-    private func colorFor(_ sgv: Int, thresholds: (low: Double, high: Double)) -> Color {
-        if Double(sgv) >= thresholds.high {
-            return .yellow
-        } else if Double(sgv) <= thresholds.low {
-            return .red
-        } else {
-            return .green
-        }
+    private func colorFor(_ sgv: Int, thresholds: (low: Double, high: Double, target: Double)) -> Color {
+        dynamicGlucoseColor(glucoseValue: Double(sgv), low: thresholds.low, target: thresholds.target, high: thresholds.high)
     }
 
     /// Groups consecutive same-colored readings into line runs (see BGRun).
@@ -403,6 +407,7 @@ final class BGChartModel: ObservableObject {
             guard let self else { return }
             self.rebuildScheduled = false
             self.performRebuild()
+            WatchSessionManager.shared.requestUpdate(reason: "chart")
         }
     }
 
@@ -433,6 +438,7 @@ final class BGChartModel: ObservableObject {
         // collect the data regardless (it also feeds the info rows), so hidden
         // kinds are dropped here at render time.
         let showBasal = Storage.shared.graphBasal.value
+        let showTargetLine = Storage.shared.graphTargetLine.value
         let showBolus = Storage.shared.graphBolus.value
         let showCarbs = Storage.shared.graphCarbs.value
         let showOtherTreatments = Storage.shared.graphOtherTreatments.value
@@ -473,7 +479,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: dose,
-                pillText: "Bolus\n\(dose)U\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nBolus\n\(dose)U",
                 detail: $0.detail
             )
         }
@@ -488,7 +494,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: label,
-                pillText: "Carbs\n\(grams)g\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nCarbs\n\(grams)g",
                 detail: $0.detail
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
@@ -500,7 +506,7 @@ final class BGChartModel: ObservableObject {
                 value: $0.value,
                 sgv: Double($0.sgv),
                 label: dose,
-                pillText: "\(automaticBolusTitle)\n\(dose)U\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\n\(automaticBolusTitle)\n\(dose)U",
                 detail: $0.detail
             )
         }
@@ -515,10 +521,10 @@ final class BGChartModel: ObservableObject {
             )
         }
         suspends = (showOtherTreatments ? vc.suspendGraphData : []).map {
-            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Suspend\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")
+            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nSuspend")
         }
         resumes = (showOtherTreatments ? vc.resumeGraphData : []).map {
-            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Resume\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")
+            TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))\nResume")
         }
         sensorStarts = (showOtherTreatments ? vc.sensorStartGraphData : []).map {
             TreatmentPoint(date: Date(timeIntervalSince1970: $0.date), value: Double($0.sgv), sgv: Double($0.sgv), label: "", pillText: "Sensor Start\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))")
@@ -548,6 +554,10 @@ final class BGChartModel: ObservableObject {
             ScheduledBasalPoint(date: Date(timeIntervalSince1970: $0.date), rate: $0.basalRate)
         }
 
+        targetScheduled = (showTargetLine ? vc.targetScheduleData : []).map {
+            ScheduledTargetPoint(date: Date(timeIntervalSince1970: $0.date), value: $0.targetHigh)
+        }
+
         var steps: [BasalStep] = []
         let sortedBasal = (showBasal ? vc.basalData : []).sorted { $0.date < $1.date }
         for i in 0 ..< sortedBasal.count {
@@ -571,6 +581,7 @@ final class BGChartModel: ObservableObject {
         overrides = (showOtherTreatments ? vc.overrideGraphData : []).map {
             let overrideName = $0.reason.trimmingCharacters(in: .whitespacesAndNewlines)
             let displayName = overrideName.isEmpty ? "Override" : overrideName
+            let isWeekendProfile = $0.enteredBy == "Trio Weekend Profile"
             return BandRect(
                 start: Date(timeIntervalSince1970: $0.date),
                 end: Date(timeIntervalSince1970: $0.endDate),
@@ -578,6 +589,7 @@ final class BGChartModel: ObservableObject {
                 yTop: yTop,
                 label: displayName,
                 pillText: "Override\n\(displayName)\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                color: isWeekendProfile ? .mint : overrideColor,
                 detail: $0.detail
             )
         }
@@ -593,6 +605,7 @@ final class BGChartModel: ObservableObject {
                 yTop: yCenter + 5,
                 label: "Temp Target",
                 pillText: "Temp Target\n\(Localizer.toDisplayUnits(target))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
+                color: tempTargetColor,
                 detail: $0.detail
             )
         }

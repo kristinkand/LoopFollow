@@ -194,7 +194,7 @@ final class LiveActivityManager {
         let provider = StorageCurrentGlucoseStateProvider()
         guard let snapshot = GlucoseSnapshotBuilder.build(from: provider) else { return }
 
-        writeThresholds()
+        Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
 
         seq += 1
@@ -659,7 +659,7 @@ final class LiveActivityManager {
 
         let provider = StorageCurrentGlucoseStateProvider()
         if let snapshot = GlucoseSnapshotBuilder.build(from: provider) {
-            writeThresholds()
+            Self.writeRangeModeThresholds()
             LAAppGroupSettings.setDisplayName(
                 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "LoopFollow",
                 show: Storage.shared.showDisplayName.value
@@ -669,6 +669,20 @@ final class LiveActivityManager {
         startIfNeeded()
     }
 
+    static let rangeModeChangedReason = "range mode changed"
+
+    /// Writes the low/high/target of the selected Range Mode (TIR, TITR, TING or
+    /// Custom) for the Live Activity, so it colors readings like the chart, BG value
+    /// and home screen widget instead of always using the Custom lines.
+    static func writeRangeModeThresholds() {
+        let thresholds = UnitSettingsStore.shared.effectiveThresholds()
+        LAAppGroupSettings.setThresholds(
+            lowMgdl: thresholds.low,
+            highMgdl: thresholds.high,
+            targetMgdl: thresholds.target
+        )
+    }
+
     func refreshFromCurrentState(reason: String) {
         // No LA guard here — Watch and store must update regardless of LA state.
         // LA-specific gating (laEnabled, dismissedByUser) is applied inside performRefresh.
@@ -676,6 +690,7 @@ final class LiveActivityManager {
             DispatchQueue.main.async { self.refreshFromCurrentState(reason: reason) }
             return
         }
+        WatchSessionManager.shared.requestUpdate(reason: reason)
         refreshCoalescer.request(reason: reason)
     }
 
@@ -1050,12 +1065,6 @@ final class LiveActivityManager {
         }
     }
 
-    /// Publishes the range for the selected time-in-range mode, matching the chart and BG header.
-    private func writeThresholds() {
-        let thresholds = UnitSettingsStore.shared.effectiveThresholds()
-        LAAppGroupSettings.setThresholds(lowMgdl: thresholds.low, highMgdl: thresholds.high)
-    }
-
     private func performRefresh(reason: String) {
         let provider = StorageCurrentGlucoseStateProvider()
         guard let snapshot = GlucoseSnapshotBuilder.build(from: provider) else {
@@ -1080,12 +1089,10 @@ final class LiveActivityManager {
         let forceRefreshNeeded = timeSinceLastUpdate >= 5 * 60
         // Capture dedup result BEFORE saving so the store comparison is valid.
         let snapshotUnchanged = GlucoseSnapshotStore.shared.load() == snapshot
-        let thresholdsChanged = LAAppGroupSettings.thresholdsMgdl() != UnitSettingsStore.shared.effectiveThresholds()
 
-        // Store + Watch: always update, independent of LA state.
-        writeThresholds()
+        // Store: always update, independent of LA state.
+        Self.writeRangeModeThresholds()
         GlucoseSnapshotStore.shared.save(snapshot)
-        // WatchConnectivityManager.shared.send(snapshot: snapshot)
 
         // LA update: gated on LA being active, snapshot having changed, and activities enabled.
         if !Storage.shared.laEnabled.value {
@@ -1096,7 +1103,9 @@ final class LiveActivityManager {
             LogManager.shared.log(category: .general, message: "[LA] refresh: LA update skipped — dismissedByUser=true reason=\(reason)")
             return
         }
-        guard !snapshotUnchanged || thresholdsChanged || forceRefreshNeeded else { return }
+        // A Range Mode change recolors the Live Activity even though the BG data is unchanged.
+        let colorsChanged = reason == Self.rangeModeChangedReason
+        guard !snapshotUnchanged || forceRefreshNeeded || colorsChanged else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             LogManager.shared.log(category: .general, message: "[LA] refresh: LA update skipped — areActivitiesEnabled=false reason=\(reason)")
             return

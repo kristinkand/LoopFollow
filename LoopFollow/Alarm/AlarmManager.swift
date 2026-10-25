@@ -44,6 +44,12 @@ class AlarmManager {
     }
 
     func checkAlarms(data: AlarmData) {
+        // Don't evaluate against stale pre-unlock state before the BFU reload runs.
+        if Storage.shared.needsBFUReload {
+            LogManager.shared.log(category: .alarm, message: "Skipping alarm check — BFU reload pending", isDebug: true)
+            return
+        }
+
         let now = Date()
         var alarmTriggered = false
 
@@ -146,9 +152,11 @@ class AlarmManager {
             }
 
             // Fire the alarm and break the loop; we only allow one alarm per evaluation tick.
+            let titleOverride = checker.notificationTitle(alarm: alarm, data: data, now: now)
+            Observable.shared.currentAlarmTitleOverride.value = titleOverride
             Observable.shared.currentAlarm.value = alarm.id
 
-            alarm.trigger(config: Storage.shared.alarmConfiguration.value, now: now)
+            alarm.trigger(config: Storage.shared.alarmConfiguration.value, now: now, titleOverride: titleOverride)
 
             // Store the latest bg time so we don't use it again
             if alarm.type.isBGBased,
@@ -203,6 +211,7 @@ class AlarmManager {
         }
         AlarmSound.stop()
         Observable.shared.currentAlarm.value = nil
+        Observable.shared.currentAlarmTitleOverride.value = nil
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 

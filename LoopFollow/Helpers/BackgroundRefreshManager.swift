@@ -69,7 +69,11 @@ class BackgroundRefreshManager {
         // Otherwise this task exists only to revive the Silent Tune keep-alive. Reading
         // the mode is safe before storage is confirmed readable: the default is
         // `.silentTune`, so an unhydrated read keeps the check armed rather than cancelling it.
-        guard !StorageReadiness.ready.value || Storage.shared.backgroundRefreshType.value == .silentTune else {
+        // The Bluetooth heartbeat fallback plays the same tune, so it keeps the check too.
+        guard !StorageReadiness.ready.value
+            || Storage.shared.backgroundRefreshType.value == .silentTune
+            || HeartbeatAudioFallback.shared.isEnabled
+        else {
             LogManager.shared.log(category: .taskScheduler, message: "Background refresh no longer needed for the current mode; cancelling")
             BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
             queue.async { self.immediateRequested = false }
@@ -98,6 +102,18 @@ class BackgroundRefreshManager {
         queue.async {
             self.immediateRequested = false
             self.submit(earliestBeginDate: Date(timeIntervalSinceNow: self.refreshInterval))
+        }
+
+        // Bluetooth mode with the Silent Tune fallback: start the silent tune if the
+        // heartbeat is overdue. Nothing else to do here while the heartbeat is fine.
+        if StorageReadiness.ready.value, Storage.shared.backgroundRefreshType.value.isBluetooth {
+            HeartbeatAudioFallback.shared.evaluate(reason: "BGAppRefreshTask") { running in
+                if running {
+                    TaskScheduler.shared.checkTasksNow()
+                }
+                complete(true)
+            }
+            return
         }
 
         DispatchQueue.main.async {

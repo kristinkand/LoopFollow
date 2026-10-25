@@ -18,7 +18,6 @@ struct BGDisplayView: View {
     @ObservedObject var isNotLooping = Observable.shared.isNotLooping
     @ObservedObject var cgmSensorState = Observable.shared.cgmSensorState
     @ObservedObject var retro = RetroSelection.shared
-    @ObservedObject var cgmSensorState = Observable.shared.cgmSensorState
 
     var onRefresh: (() -> Void)?
 

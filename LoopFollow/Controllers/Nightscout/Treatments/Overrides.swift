@@ -132,7 +132,7 @@ extension MainViewController {
                     ?? "",
                 sgv: -20,
                 scheduledEndDate: span.trueEnd,
-                detail: Treatment.historyEntries(from: e, date: startDate.timeIntervalSince1970) { 0 }.entries.first
+                detail: Treatment.historyEntries(from: e, date: (startDate(of: e) ?? Date(timeIntervalSince1970: span.start)).timeIntervalSince1970) { 0 }.entries.first
             )
             overrideGraphData.append(dot)
 

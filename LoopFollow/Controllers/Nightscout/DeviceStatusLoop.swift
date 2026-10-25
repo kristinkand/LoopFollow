@@ -8,6 +8,7 @@ import SwiftUI
 extension MainViewController {
     func DeviceStatusLoop(formatter: ISO8601DateFormatter, lastLoopRecord: [String: AnyObject]) {
         Storage.shared.device.value = "Loop"
+        Storage.shared.loopRemoteCommands.value = (lastLoopRecord["testingDetails"] as? [String: AnyObject])?["remoteCommands"] as? [String] ?? []
 
         if Storage.shared.remoteType.value == .trc {
             Storage.shared.remoteType.value = .none
@@ -15,6 +16,21 @@ extension MainViewController {
 
         let previousLastLoopTime = Observable.shared.previousAlertLastLoopTime.value ?? 0
         let lastLoopTime = Observable.shared.alertLastLoopTime.value ?? 0
+
+        // Loop reports IOB and COB even when the loop failed.
+        if let insulinMetric = InsulinMetric(from: lastLoopRecord["iob"], key: "iob") {
+            infoManager.updateInfoData(type: .iob, value: insulinMetric)
+            latestIOB = insulinMetric
+            Observable.shared.iobText.value = insulinMetric.formattedValue()
+        }
+
+        if let cobMetric = CarbMetric(from: lastLoopRecord["cob"], key: "cob") {
+            infoManager.updateInfoData(type: .cob, value: cobMetric)
+            latestCOB = cobMetric
+        }
+
+        Storage.shared.lastIOB.value = latestIOB?.value
+        Storage.shared.lastCOB.value = latestCOB?.value
 
         if lastLoopRecord["failureReason"] != nil {
             Observable.shared.loopStatusText.value = "X"
@@ -51,22 +67,11 @@ extension MainViewController {
             Storage.shared.lastTargetLowMgdl.value = profileTargetLow?.doubleValue(for: .milligramsPerDeciliter)
             Storage.shared.lastTargetHighMgdl.value = profileTargetHigh?.doubleValue(for: .milligramsPerDeciliter)
 
-            // IOB
-            if let insulinMetric = InsulinMetric(from: lastLoopRecord["iob"], key: "iob") {
-                infoManager.updateInfoData(type: .iob, value: insulinMetric)
-                latestIOB = insulinMetric
-                Observable.shared.iobText.value = insulinMetric.formattedValue()
-            }
-
-            // COB
-            if let cobMetric = CarbMetric(from: lastLoopRecord["cob"], key: "cob") {
-                infoManager.updateInfoData(type: .cob, value: cobMetric)
-                latestCOB = cobMetric
-            }
-
-            if let predictdata = lastLoopRecord["predicted"] as? [String: AnyObject] {
-                let prediction = predictdata["values"] as! [Double]
-                Observable.shared.predictionText.value = Localizer.toDisplayUnits(String(Int(round(prediction.last!))))
+            if let predictdata = lastLoopRecord["predicted"] as? [String: AnyObject],
+               let prediction = predictdata["values"] as? [Double],
+               let lastPrediction = prediction.last
+            {
+                Observable.shared.predictionText.value = Localizer.toDisplayUnits(String(Int(round(lastPrediction))))
                 Observable.shared.predictionColor.value = .purple
                 if Storage.shared.downloadPrediction.value, previousLastLoopTime < lastLoopTime || predictionData.isEmpty {
                     predictionData.removeAll()
@@ -108,7 +113,9 @@ extension MainViewController {
                 Observable.shared.deviceRecBolus.value = nil
             }
             if let loopStatus = lastLoopRecord["recommendedTempBasal"] as? [String: AnyObject] {
-                if let tempBasalTime = formatter.date(from: (loopStatus["timestamp"] as! String))?.timeIntervalSince1970 {
+                if let tempBasalString = loopStatus["timestamp"] as? String,
+                   let tempBasalTime = formatter.date(from: tempBasalString)?.timeIntervalSince1970
+                {
                     var lastBGTime = lastLoopTime
                     if bgData.count > 0 {
                         lastBGTime = bgData[bgData.count - 1].date
@@ -127,8 +134,6 @@ extension MainViewController {
             }
 
             // Live Activity storage
-            Storage.shared.lastIOB.value = latestIOB?.value
-            Storage.shared.lastCOB.value = latestCOB?.value
             if let predictdata = lastLoopRecord["predicted"] as? [String: AnyObject],
                let values = predictdata["values"] as? [Double]
             {

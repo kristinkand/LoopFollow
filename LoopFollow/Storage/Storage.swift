@@ -39,8 +39,6 @@ class Storage {
     var hasSeenFatProteinOrderChange = StorageValue<Bool>(key: "hasSeenFatProteinOrderChange", defaultValue: true)
 
     var backgroundRefreshType = StorageValue<BackgroundRefreshType>(key: "backgroundRefreshType", defaultValue: .silentTune)
-    /// Bluetooth modes: start the silent tune while the heartbeat is missing.
-    var bleSilentTuneFallback = StorageValue<Bool>(key: "bleSilentTuneFallback", defaultValue: true)
 
     var selectedBLEDevice = StorageValue<BLEDevice?>(key: "selectedBLEDevice", defaultValue: nil)
 
@@ -312,7 +310,6 @@ class Storage {
         hasSeenFatProteinOrderChange.reload()
 
         backgroundRefreshType.reload()
-        bleSilentTuneFallback.reload()
         selectedBLEDevice.reload()
         debugLogLevel.reload()
 

@@ -16,8 +16,8 @@ class StatsDisplayModel: ObservableObject {
     @Published var pieRange: Double = 0
     @Published var pieHigh: Double = 0
 
-    // Time in Range band (same period as the statistics box, Trio-style)
-    @Published var bandTitle: String = "TIR"
+    // Time in Range band (same period as the statistics box)
+    @Published var bandTitle: String = "Time in Range"
     @Published var bandPeriod: String = "last 24h"
     @Published var bandHasData: Bool = false
     @Published var bandVeryLowPct: Double = 0

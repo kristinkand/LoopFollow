@@ -56,6 +56,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         UNUserNotificationCenter.current().delegate = self
 
+        WatchSessionManager.shared.activate()
+
         // Only spin up Bluetooth if the user has chosen a BLE-based background
         // refresh. Initializing BLEManager creates a CBCentralManager, which
         // triggers the Bluetooth permission prompt — deferring it keeps that
@@ -65,8 +67,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         // Ensure VolumeButtonHandler is initialized so it can receive alarm notifications
         _ = VolumeButtonHandler.shared
-
-        WatchConnectivityManager.shared.activate()
 
         // Register for remote notifications
         DispatchQueue.main.async {

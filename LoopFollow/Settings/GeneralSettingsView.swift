@@ -66,8 +66,8 @@ struct GeneralSettingsView: View {
                 Toggle("Display Stats", isOn: $showStats.value)
                 if showStats.value {
                     Picker("Stats Style", selection: $showTIRBand.value) {
-                        Text("Time in Range Band").tag(true)
                         Text("Statistics Box").tag(false)
+                        Text("Time in Range Band").tag(true)
                     }
                     Picker("Stats Period", selection: $statsSinceMidnight.value) {
                         Text("Last 24 Hours").tag(false)

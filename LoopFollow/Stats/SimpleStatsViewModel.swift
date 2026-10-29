@@ -230,8 +230,12 @@ class SimpleStatsViewModel: ObservableObject {
 
         var currentTime = startTime
         while currentTime < endTime {
-            let dayStart = days.dayStart(for: currentTime)
-            let nextDayStart = dayStart + 24 * 60 * 60
+            // The next day by the calendar, not 24 hours on: a DST fall-back day has 25 hours,
+            // and stepping 24 hours from its midnight stays inside it for good (#795).
+            let day = days.day(for: currentTime)
+            let dayStart = day.start
+            let nextDayStart = day.next
+            guard nextDayStart > currentTime else { break }
 
             // Process each profile segment for this day
             for i in 0 ..< sortedProfile.count {
@@ -350,13 +354,19 @@ struct DayStartCache {
 
     /// The start of the day holding `time`, as `calendar.startOfDay` gives it.
     mutating func dayStart(for time: TimeInterval) -> TimeInterval {
+        day(for: time).start
+    }
+
+    /// The day holding `time`: its midnight and the next one, a calendar day apart, so a
+    /// daylight-saving day is 23 or 25 hours long.
+    mutating func day(for time: TimeInterval) -> (start: TimeInterval, next: TimeInterval) {
         if time >= cachedStart, time < cachedEnd {
-            return cachedStart
+            return (cachedStart, cachedEnd)
         }
         let start = calendar.startOfDay(for: Date(timeIntervalSince1970: time))
         let next = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60)
         cachedStart = start.timeIntervalSince1970
         cachedEnd = next.timeIntervalSince1970
-        return cachedStart
+        return (cachedStart, cachedEnd)
     }
 }

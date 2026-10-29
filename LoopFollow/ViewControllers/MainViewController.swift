@@ -634,13 +634,6 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             BackgroundRefreshManager.shared.scheduleRefresh()
         }
 
-        // Bluetooth heartbeat missing? Keep LoopFollow running with the silent tune
-        // until a heartbeat arrives again. The refresh request lets iOS re-check later.
-        if HeartbeatAudioFallback.shared.isEnabled {
-            HeartbeatAudioFallback.shared.evaluate(reason: "app moved to background")
-            BackgroundRefreshManager.shared.scheduleRefresh()
-        }
-
         if mode.keepsAppRunning {
             BackgroundAlertManager.shared.startBackgroundAlert()
         }
@@ -787,9 +780,6 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         if selected == .silentTune || selected == .hub {
             backgroundTask.stopBackgroundTask()
         }
-
-        // Not needed while the app is open; re-checked when it goes to the background.
-        HeartbeatAudioFallback.shared.stop(reason: "app in foreground")
 
         if selected.keepsAppRunning || selected == .hub {
             BackgroundAlertManager.shared.stopBackgroundAlert()
@@ -1325,9 +1315,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
 extension MainViewController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_: AVSpeechSynthesizer, didFinish _: AVSpeechUtterance) {
         let appState = UIApplication.shared.applicationState
-        // The heartbeat fallback plays the same silent tune, so it must not be cut off either.
         let isSilentTuneMode = BackgroundRefreshType.inEffect == .silentTune
-            || HeartbeatAudioFallback.shared.isActive
 
         if isSilentTuneMode, appState == .background {
             LogManager.shared.log(category: .general, message: "Silent tune active in background; not deactivating session.", isDebug: true)

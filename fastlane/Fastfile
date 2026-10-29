@@ -192,6 +192,8 @@ platform :ios do
       skip_submission: false,
       ipa: "LoopFollow.ipa",
       skip_waiting_for_build_processing: true,
+      # The branch and commit as TestFlight's "What to Test" note, so a build shows where it came from.
+      changelog: git_branch+" "+last_git_commit[:abbreviated_commit_hash],
     )
   end
 

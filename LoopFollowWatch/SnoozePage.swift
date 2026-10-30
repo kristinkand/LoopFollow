@@ -76,7 +76,7 @@ struct SnoozePage: View {
     }
 }
 
-/// End Snooze while snoozed, then the snooze durations. The phone applies the choice
+/// End Snooze while snoozed, then the snooze durations and a chosen end time. The phone applies the choice
 /// and sends the new state back, so the page shows what the phone actually set.
 private struct SnoozeOptionsView: View {
     let snoozedUntil: Date?
@@ -120,6 +120,12 @@ private struct SnoozeOptionsView: View {
                         send(until: Date().addingTimeInterval(TimeInterval(option.minutes * 60)))
                     }
                 }
+
+                NavigationLink("Until a time…") {
+                    SnoozeUntilTimeView(current: snoozedUntil) { end in
+                        send(until: end)
+                    }
+                }
             }
             .disabled(isSending)
             .navigationTitle(isSending ? "Sending…" : "Snooze All")
@@ -142,5 +148,59 @@ private struct SnoozeOptionsView: View {
                 error = reply.message
             }
         }
+    }
+}
+
+/// Snoozes until a time picked with the Digital Crown, like the phone's snooze date and time:
+/// the next time the clock shows it, so 07:00 picked at 22:00 means tomorrow morning.
+private struct SnoozeUntilTimeView: View {
+    var onSnooze: (Date) -> Void
+    @State private var time: Date
+
+    init(current: Date?, onSnooze: @escaping (Date) -> Void) {
+        self.onSnooze = onSnooze
+        // A running snooze's end, or an hour from now rounded up to the quarter hour.
+        let start = current.flatMap { $0 > Date() ? $0 : nil } ?? Self.roundedUpToQuarter(Date().addingTimeInterval(3600))
+        _time = State(initialValue: start)
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let now = max(context.date, Date())
+            let end = Self.nextOccurrence(of: time, after: now)
+            ScrollView {
+                VStack(spacing: 6) {
+                    DatePicker("Until", selection: $time, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                    Text(Self.describe(end, now: now))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Snooze") { onSnooze(Self.nextOccurrence(of: time, after: Date())) }
+                        .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .navigationTitle("Until")
+    }
+
+    /// The first time after `now` the clock shows the picked hour and minute: today, or tomorrow
+    /// once that has passed. Always within 24 hours, as the phone requires.
+    static func nextOccurrence(of picked: Date, after now: Date) -> Date {
+        let calendar = Calendar.current
+        let clock = calendar.dateComponents([.hour, .minute], from: picked)
+        return calendar.nextDate(after: now, matching: clock, matchingPolicy: .nextTime) ?? picked
+    }
+
+    /// "Today 23:30 · in 1 h 15" or "Tomorrow 07:00 · in 8 h 30".
+    static func describe(_ end: Date, now: Date) -> String {
+        let day = Calendar.current.isDate(end, inSameDayAs: now) ? "Today" : "Tomorrow"
+        let minutes = max(Int(ceil(end.timeIntervalSince(now) / 60)), 0)
+        return "\(day) \(end.formatted(date: .omitted, time: .shortened)) · in \(SnoozePage.remaining(minutes))"
+    }
+
+    static func roundedUpToQuarter(_ date: Date) -> Date {
+        let quarter: TimeInterval = 15 * 60
+        return Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / quarter).rounded(.up) * quarter)
     }
 }

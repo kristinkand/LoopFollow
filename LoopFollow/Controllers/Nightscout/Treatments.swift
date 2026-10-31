@@ -76,6 +76,7 @@ extension MainViewController {
         var carbs: [[String: AnyObject]] = []
         var temporaryOverride: [[String: AnyObject]] = []
         var temporaryTarget: [[String: AnyObject]] = []
+        var untethered: [[String: AnyObject]] = []
         var note: [[String: AnyObject]] = []
         var bgCheck: [[String: AnyObject]] = []
         var suspendPump: [[String: AnyObject]] = []
@@ -109,6 +110,8 @@ extension MainViewController {
                 temporaryOverride.append(entry)
             case "Temporary Target":
                 temporaryTarget.append(entry)
+            case "Untethered Watch":
+                untethered.append(entry)
             case "Note":
                 note.append(entry)
             case "BG Check":
@@ -178,6 +181,12 @@ extension MainViewController {
         }
         if temporaryOverride.count > 0 {
             processNSOverrides(entries: temporaryOverride)
+        }
+
+        if untethered.isEmpty {
+            if !untetheredGraphData.isEmpty { clearOldUntethered() }
+        } else {
+            processNSUntethered(entries: untethered)
         }
 
         if temporaryTarget.count == 0, tempTargetGraphData.count > 0 {

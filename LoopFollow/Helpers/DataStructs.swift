@@ -60,6 +60,14 @@ class DataStructs {
         var detail: Treatment? = nil
     }
 
+    /// A time Trio's Apple Watch app had the pump (untethered), from Trio's "Untethered Watch" treatment.
+    struct untetheredStruct {
+        var date: TimeInterval
+        var endDate: TimeInterval
+        /// No end uploaded yet: the watch still has the pump, and the band runs to now.
+        var ongoing: Bool
+    }
+
     struct tempTargetStruct {
         var date: TimeInterval
         var endDate: TimeInterval

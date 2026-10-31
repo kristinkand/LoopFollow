@@ -834,6 +834,9 @@ private struct MainBGChart: View {
         {
             texts.append(band.pillText)
         }
+        if let band = model.untethered.last(where: { date >= $0.start && date <= $0.end }) {
+            texts.append(band.pillText)
+        }
         return texts
     }
 
@@ -858,6 +861,12 @@ private struct MainBGChart: View {
             }
         }
         for band in model.tempTargets where date >= band.start && date <= band.end {
+            if value >= band.yBottom, value <= band.yTop {
+                let midY = (band.yTop + band.yBottom) / 2
+                return SelectionAnchor(date: date, value: midY, texts: [band.pillText], detail: band.detail)
+            }
+        }
+        for band in model.untethered where date >= band.start && date <= band.end {
             if value >= band.yBottom, value <= band.yTop {
                 let midY = (band.yTop + band.yBottom) / 2
                 return SelectionAnchor(date: date, value: midY, texts: [band.pillText], detail: band.detail)
@@ -1026,7 +1035,7 @@ private struct MainBGChart: View {
             let visibleStart = interaction.scrollPosition
             let visibleEnd = interaction.scrollPosition.addingTimeInterval(interaction.visibleSeconds)
 
-            ForEach(model.overrides.filter { $0.end >= visibleStart && $0.start <= visibleEnd }) { band in
+            ForEach((model.overrides + model.untethered).filter { $0.end >= visibleStart && $0.start <= visibleEnd }) { band in
                 let visibleBandStart = max(band.start, visibleStart)
                 let visibleBandEnd = min(band.end, visibleEnd)
                 let xStart = xPosition(for: visibleBandStart, viewportWidth: viewportWidth)
@@ -1410,6 +1419,16 @@ private struct BGChartCanvas: View, Equatable {
                 yEnd: .value("yTop", band.yTop)
             )
             .foregroundStyle(band.color.opacity(0.5))
+        }
+
+        ForEach(model.untethered.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
+            RectangleMark(
+                xStart: .value("start", band.start),
+                xEnd: .value("end", band.end),
+                yStart: .value("yBottom", band.yBottom),
+                yEnd: .value("yTop", band.yTop)
+            )
+            .foregroundStyle(band.color.opacity(0.6))
         }
     }
 

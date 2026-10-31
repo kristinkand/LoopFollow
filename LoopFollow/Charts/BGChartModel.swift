@@ -165,6 +165,8 @@ final class BGChartModel: ObservableObject {
 
     @Published var overrides: [BandRect] = []
     @Published var tempTargets: [BandRect] = []
+    /// Times Trio's Apple Watch app had the pump: a strip just under the overrides' strip.
+    @Published var untethered: [BandRect] = []
 
     // Backend-aware band colors: Loop draws overrides green / temp targets purple,
     // Trio (and other OpenAPS backends) use the inverse. Mirrors TreatmentGraphColors.
@@ -607,6 +609,23 @@ final class BGChartModel: ObservableObject {
                 pillText: "Temp Target\n\(Localizer.toDisplayUnits(target))\n\(pillTimeString(for: Date(timeIntervalSince1970: $0.date)))",
                 color: tempTargetColor,
                 detail: $0.detail
+            )
+        }
+
+        let untetheredNow = Date(timeIntervalSince1970: dateTimeUtils.getNowTimeIntervalUTC())
+        untethered = (showOtherTreatments ? vc.untetheredGraphData : []).map {
+            let start = Date(timeIntervalSince1970: $0.date)
+            // a running session reaches to now at every rebuild
+            let end = $0.ongoing ? untetheredNow : Date(timeIntervalSince1970: $0.endDate)
+            let state = $0.ongoing ? "since" : "from"
+            return BandRect(
+                start: start,
+                end: end,
+                yBottom: yBottom - 14,
+                yTop: yBottom - 4,
+                label: "Untethered",
+                pillText: "Untethered on Apple Watch\n\(state) \(pillTimeString(for: start))",
+                color: .teal
             )
         }
 

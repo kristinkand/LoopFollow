@@ -201,4 +201,5 @@ extension MainViewController {
     func updateNotes() { chartModel.rebuild() }
     func updateSmbGraph() { chartModel.rebuild() }
     func updateTempTargetGraph() { chartModel.rebuild() }
+    func updateUntetheredGraph() { chartModel.rebuild() }
 }

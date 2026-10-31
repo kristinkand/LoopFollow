@@ -73,6 +73,7 @@ final class RemoteCommandTracker: ObservableObject {
     /// Returns true when the push resolved a pending command.
     @discardableResult
     func handleNotification(userInfo: [AnyHashable: Any]) -> Bool {
+        TrioAnswerWatch.shared.note(userInfo)
         guard let resolution = trioAcks.resolution(for: userInfo) ?? LoopCarbAckAdapter.resolution(for: userInfo) else { return false }
         guard isBusy(key: resolution.key) else {
             LogManager.shared.log(category: .apns, message: "Ack for \(LogRedactor.tail(resolution.key)) matched no pending command")

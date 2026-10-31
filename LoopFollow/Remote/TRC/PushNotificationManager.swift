@@ -83,7 +83,8 @@ class PushNotificationManager {
             bolusAmount: bolusAmountDecimal,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: completion)
+        let summary = "bolus of \(InsulinFormatter.shared.string(bolusAmount.doubleValue(for: .internationalUnit()))) U"
+        sendEncryptedCommand(payload: payload, completion: expectingAnswer(payload, summary: summary, completion))
     }
 
     func sendTempTargetPushNotification(target: HKQuantity, duration: HKQuantity, completion: @escaping (Bool, String?) -> Void) {
@@ -147,7 +148,8 @@ class PushNotificationManager {
             scheduledTime: scheduledTimeInterval,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: completion)
+        let summary = bolusAmountValue == nil ? "meal" : "meal with a bolus"
+        sendEncryptedCommand(payload: payload, completion: expectingAnswer(payload, summary: summary, completion))
     }
 
     /// Trio confirms edit/delete through a return notification, so LoopFollow's own APNs credentials are required.
@@ -246,6 +248,20 @@ class PushNotificationManager {
     /// A bolus, meal, override or temp target also goes straight to Trio's watch app when Trio uploaded its token: while the watch runs the
     /// loop untethered it may be away from the phone, and acts on the copy that reaches it first. Without the pump it
     /// leaves the command to the phone. The answer comes from whichever acted on it.
+    /// Once Apple took a command that asked for an answer, `TrioAnswerWatch` speaks up if none comes.
+    private func expectingAnswer(
+        _ payload: CommandPayload,
+        summary: String,
+        _ completion: @escaping (Bool, String?) -> Void
+    ) -> (Bool, String?) -> Void {
+        { success, message in
+            if success, payload.returnNotification != nil {
+                TrioAnswerWatch.shared.expect(payload.commandType, summary: summary)
+            }
+            completion(success, message)
+        }
+    }
+
     private func sendToTrioWatch(encryptedData: String, commandType: TRCCommandType) {
         let watchToken = Storage.shared.watchDeviceToken.value
         let watchTopic = Storage.shared.watchBundleId.value

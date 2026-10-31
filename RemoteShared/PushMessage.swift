@@ -30,6 +30,26 @@ struct EncryptedPushMessage: Encodable {
     }
 }
 
+/// The copy of a Trio command sent straight to Trio's watch app: silent, it wakes the app without showing anything,
+/// and the watch shows its own notice once it has acted on it.
+struct SilentEncryptedPushMessage: Encodable {
+    struct APSPayload: Encodable {
+        let contentAvailable: Int = 1
+
+        enum CodingKeys: String, CodingKey {
+            case contentAvailable = "content-available"
+        }
+    }
+
+    let aps = APSPayload()
+    let encryptedData: String
+
+    enum CodingKeys: String, CodingKey {
+        case aps
+        case encryptedData = "encrypted_data"
+    }
+}
+
 struct CommandPayload: Encodable {
     var user: String
     var commandType: TRCCommandType

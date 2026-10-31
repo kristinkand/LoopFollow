@@ -243,6 +243,36 @@ class PushNotificationManager {
         return keyLines.joined()
     }
 
+    /// A bolus or meal also goes straight to Trio's watch app when Trio uploaded its token: while the watch runs the
+    /// loop untethered it may be away from the phone, and acts on the copy that reaches it first. Without the pump it
+    /// leaves the command to the phone. The answer comes from whichever acted on it.
+    private func sendToTrioWatch(encryptedData: String, commandType: TRCCommandType) {
+        let watchToken = Storage.shared.watchDeviceToken.value
+        let watchTopic = Storage.shared.watchBundleId.value
+        guard commandType == .bolus || commandType == .meal, !watchToken.isEmpty, !watchTopic.isEmpty else { return }
+        do {
+            try APNSDelivery.send(
+                body: JSONEncoder().encode(SilentEncryptedPushMessage(encryptedData: encryptedData)),
+                deviceToken: watchToken,
+                topic: watchTopic,
+                production: productionEnvironment,
+                keyId: keyId,
+                teamId: teamId,
+                apnsKey: apnsKey,
+                expiration: "600",
+                pushType: "background",
+                priority: "5"
+            ) { success, message in
+                LogManager.shared.log(
+                    category: .apns,
+                    message: success ? "Copy sent to Trio's watch app" : "Copy to Trio's watch app not sent: \(message ?? "")"
+                )
+            }
+        } catch {
+            LogManager.shared.log(category: .apns, message: "Copy to Trio's watch app not encoded: \(error.localizedDescription)")
+        }
+    }
+
     private func sendEncryptedCommand(payload: CommandPayload, completion: @escaping (Bool, String?) -> Void) {
         var missingFields = [String]()
         if sharedSecret.isEmpty { missingFields.append("sharedSecret") }
@@ -277,6 +307,7 @@ class PushNotificationManager {
 
             let encryptedDataString = try messenger.encrypt(payload)
             let finalMessage = EncryptedPushMessage(encryptedData: encryptedDataString, commandType: payload.commandType)
+            sendToTrioWatch(encryptedData: encryptedDataString, commandType: payload.commandType)
 
             try APNSDelivery.send(
                 body: JSONEncoder().encode(finalMessage),

@@ -17,6 +17,8 @@ enum APNSDelivery {
         apnsKey: String,
         expiration: String? = nil,
         collapseID: String? = nil,
+        pushType: String = "alert",
+        priority: String = "10",
         completion: @escaping (Bool, String?) -> Void
     ) {
         guard let jwt = JWTManager.shared.getOrGenerateJWT(keyId: keyId, teamId: teamId, apnsKey: apnsKey) else {
@@ -37,9 +39,9 @@ enum APNSDelivery {
         request.httpMethod = "POST"
         request.setValue("bearer \(jwt)", forHTTPHeaderField: "authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.setValue("10", forHTTPHeaderField: "apns-priority")
+        request.setValue(priority, forHTTPHeaderField: "apns-priority")
         request.setValue(topic, forHTTPHeaderField: "apns-topic")
-        request.setValue("alert", forHTTPHeaderField: "apns-push-type")
+        request.setValue(pushType, forHTTPHeaderField: "apns-push-type")
         if let expiration {
             request.setValue(expiration, forHTTPHeaderField: "apns-expiration")
         }

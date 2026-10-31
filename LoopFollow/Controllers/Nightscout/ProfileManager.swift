@@ -109,6 +109,8 @@ final class ProfileManager {
         }
 
         Storage.shared.deviceToken.value = profileData.deviceToken ?? profileData.loopSettings?.deviceToken ?? ""
+        Storage.shared.watchDeviceToken.value = profileData.watchDeviceToken ?? ""
+        Storage.shared.watchBundleId.value = profileData.watchBundleIdentifier ?? ""
 
         if let expirationDate = profileData.expirationDate {
             Storage.shared.expirationDate.value = NightscoutUtils.parseDate(expirationDate)

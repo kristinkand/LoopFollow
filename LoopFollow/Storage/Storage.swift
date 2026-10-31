@@ -11,6 +11,9 @@ import HealthKit
 class Storage {
     var remoteType = StorageValue<RemoteType>(key: "remoteType", defaultValue: .none)
     var deviceToken = StorageValue<String>(key: "deviceToken", defaultValue: "")
+    /// Trio's watch app, from the Nightscout profile; empty without one.
+    var watchDeviceToken = StorageValue<String>(key: "watchDeviceToken", defaultValue: "")
+    var watchBundleId = StorageValue<String>(key: "watchBundleId", defaultValue: "")
     var expirationDate = StorageValue<Date?>(key: "expirationDate", defaultValue: nil)
     var sharedSecret = StorageValue<String>(key: "sharedSecret", defaultValue: "")
     var productionEnvironment = StorageValue<Bool>(key: "productionEnvironment", defaultValue: false)

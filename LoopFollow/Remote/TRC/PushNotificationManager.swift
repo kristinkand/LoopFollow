@@ -243,13 +243,14 @@ class PushNotificationManager {
         return keyLines.joined()
     }
 
-    /// A bolus or meal also goes straight to Trio's watch app when Trio uploaded its token: while the watch runs the
+    /// A bolus, meal, override or temp target also goes straight to Trio's watch app when Trio uploaded its token: while the watch runs the
     /// loop untethered it may be away from the phone, and acts on the copy that reaches it first. Without the pump it
     /// leaves the command to the phone. The answer comes from whichever acted on it.
     private func sendToTrioWatch(encryptedData: String, commandType: TRCCommandType) {
         let watchToken = Storage.shared.watchDeviceToken.value
         let watchTopic = Storage.shared.watchBundleId.value
-        guard commandType == .bolus || commandType == .meal, !watchToken.isEmpty, !watchTopic.isEmpty else { return }
+        let toWatch: Set<TRCCommandType> = [.bolus, .meal, .startOverride, .cancelOverride, .tempTarget, .cancelTempTarget]
+        guard toWatch.contains(commandType), !watchToken.isEmpty, !watchTopic.isEmpty else { return }
         do {
             try APNSDelivery.send(
                 body: JSONEncoder().encode(SilentEncryptedPushMessage(encryptedData: encryptedData)),

@@ -276,7 +276,9 @@ class PushNotificationManager {
                 keyId: keyId,
                 teamId: teamId,
                 apnsKey: apnsKey,
-                expiration: "600",
+                // an absolute time, as Apple reads it: "600" (a moment in 1970) meant "already expired", so a watch
+                // that was briefly offline never got the copy. Kept as long as the watch would still act on it.
+                expiration: String(Int(Date().timeIntervalSince1970) + 600),
                 pushType: "background",
                 priority: "5"
             ) { success, message in

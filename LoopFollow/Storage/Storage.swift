@@ -424,7 +424,6 @@ class Storage {
         chartScaleX.reload()
 
         downloadTreatments.reload()
-        downloadPrediction.reload()
         graphOtherTreatments.reload()
         graphBasal.reload()
         graphTargetLine.reload()

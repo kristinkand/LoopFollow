@@ -51,7 +51,11 @@ final class AppIconManager: ObservableObject {
         let previous = current
         current = option
         UIApplication.shared.setAlternateIconName(option.alternateIconName) { error in
-            guard let error else { return }
+            guard let error else {
+                // The watch's icon complication shows the picked icon.
+                WatchSessionManager.shared.requestUpdate(reason: "app icon")
+                return
+            }
             LogManager.shared.log(category: .general, message: "Failed to change app icon: \(error.localizedDescription)")
             DispatchQueue.main.async { self.current = previous }
         }
@@ -100,7 +104,7 @@ struct AppIconSettingsView: View {
                 .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                Text("The icon on the Home Screen changes right away and iOS shows a short confirmation. The Apple Watch app keeps the classic icon.")
+                Text("The icon on the Home Screen changes right away and iOS shows a short confirmation. The Apple Watch app keeps its own icon, but the LoopFollow Icon complication on a watch face shows the icon picked here.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -34,6 +34,8 @@ final class WatchSessionManager: NSObject {
 
     func activate() {
         guard let session else { return }
+        // Read on the main thread here, so building a state off it later finds the icon ready.
+        _ = AppIconManager.shared
         session.delegate = self
         session.activate()
         observeSettings()

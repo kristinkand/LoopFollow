@@ -68,7 +68,8 @@ enum WatchStateBuilder {
             device: Storage.shared.device.value,
             alarm: currentAlarm(),
             snoozeAllUntil: Storage.shared.alarmConfiguration.value.snoozeUntil.flatMap { $0 > now ? $0 : nil },
-            remote: remoteConfig()
+            remote: remoteConfig(),
+            appIcon: AppIconManager.shared.current.rawValue
         )
     }
 

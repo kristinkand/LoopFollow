@@ -8,6 +8,7 @@ import WidgetKit
 struct LoopFollowWatchWidgets: WidgetBundle {
     var body: some Widget {
         GlucoseComplication()
+        AppIconComplication()
     }
 }
 

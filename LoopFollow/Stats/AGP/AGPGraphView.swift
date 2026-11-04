@@ -48,7 +48,7 @@ struct AGPGraphView: View {
         }
     }
 
-    private var activeThresholds: (low: Double, high: Double) {
+    private var activeThresholds: (low: Double, high: Double, target: Double) {
         UnitSettingsStore.shared.effectiveThresholds()
     }
 

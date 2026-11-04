@@ -150,7 +150,10 @@ enum StandaloneFetcher {
             stats: base?.stats,
             device: base?.device ?? "",
             alarm: nil,
-            remote: remote
+            // The phone's snooze, as last heard, so the snooze page keeps it while the phone is away.
+            snoozeAllUntil: base?.snoozeAllUntil,
+            remote: remote,
+            appIcon: base?.appIcon
         )
     }
 

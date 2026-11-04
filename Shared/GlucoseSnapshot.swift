@@ -117,6 +117,9 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
     /// Max predicted BG in mg/dL (nil if not available)
     let maxBgMgdl: Double?
 
+    /// Recent glucose history for the Lock Screen mini graph (last ~6 hours).
+    let history: [LAHistoryPoint]
+
     // MARK: - Unit Context
 
     /// User's preferred display unit. Values are always stored in mg/dL;
@@ -170,6 +173,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         iageInsertTime: TimeInterval = 0,
         minBgMgdl: Double? = nil,
         maxBgMgdl: Double? = nil,
+        history: [LAHistoryPoint] = [],
         unit: Unit,
         isNotLooping: Bool,
         cgmSensorState: String? = nil,
@@ -204,6 +208,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         self.iageInsertTime = iageInsertTime
         self.minBgMgdl = minBgMgdl
         self.maxBgMgdl = maxBgMgdl
+        self.history = history
         self.unit = unit
         self.isNotLooping = isNotLooping
         self.cgmSensorState = cgmSensorState
@@ -251,6 +256,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
             iageInsertTime: iageInsertTime,
             minBgMgdl: minBgMgdl,
             maxBgMgdl: maxBgMgdl,
+            history: history,
             unit: unit,
             isNotLooping: isNotLooping,
             cgmSensorState: cgmSensorState,
@@ -291,6 +297,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         try container.encode(iageInsertTime, forKey: .iageInsertTime)
         try container.encodeIfPresent(minBgMgdl, forKey: .minBgMgdl)
         try container.encodeIfPresent(maxBgMgdl, forKey: .maxBgMgdl)
+        try container.encode(history, forKey: .history)
         try container.encode(unit, forKey: .unit)
         try container.encode(isNotLooping, forKey: .isNotLooping)
         try container.encodeIfPresent(cgmSensorState, forKey: .cgmSensorState)
@@ -328,6 +335,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         iageInsertTime = try container.decodeIfPresent(Double.self, forKey: .iageInsertTime) ?? 0
         minBgMgdl = try container.decodeIfPresent(Double.self, forKey: .minBgMgdl)
         maxBgMgdl = try container.decodeIfPresent(Double.self, forKey: .maxBgMgdl)
+        history = try container.decodeIfPresent([LAHistoryPoint].self, forKey: .history) ?? []
         unit = try container.decode(Unit.self, forKey: .unit)
         isNotLooping = try container.decodeIfPresent(Bool.self, forKey: .isNotLooping) ?? false
         cgmSensorState = try container.decodeIfPresent(String.self, forKey: .cgmSensorState)
@@ -342,6 +350,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         case autosens, tdd, targetLowMgdl, targetHighMgdl, isfMgdlPerU, carbRatio, carbsToday
         case profileName, sageInsertTime, cageInsertTime, iageInsertTime, minBgMgdl, maxBgMgdl
         case unit, isNotLooping, cgmSensorState, showRenewalOverlay
+        case history
     }
 }
 

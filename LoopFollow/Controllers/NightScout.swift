@@ -30,6 +30,12 @@ extension MainViewController {
         var date: TimeInterval
     }
 
+    // NS Target Data Struct
+    struct targetGraphStruct: Codable {
+        var targetHigh: Double
+        var date: TimeInterval
+    }
+
     // NS Bolus Data  Struct
     struct bolusGraphStruct {
         var value: Double
@@ -78,6 +84,7 @@ extension MainViewController {
         overrideGraphData.removeAll()
         Observable.shared.override.value = nil
         Observable.shared.overrideEndAt.value = nil
+        Observable.shared.weekendProfileActive.value = false
         updateOverrideGraph()
     }
 

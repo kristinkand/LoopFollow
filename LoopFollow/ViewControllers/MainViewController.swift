@@ -74,6 +74,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     var basalProfile: [basalProfileStruct] = []
     var basalData: [basalGraphStruct] = []
     var basalScheduleData: [basalGraphStruct] = []
+    var targetScheduleData: [targetGraphStruct] = []
     var bolusData: [bolusGraphStruct] = []
     var smbData: [bolusGraphStruct] = []
     var carbData: [carbGraphStruct] = []
@@ -86,6 +87,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     var statsBasalData: [basalGraphStruct] = []
     var overrideGraphData: [DataStructs.overrideStruct] = []
     var tempTargetGraphData: [DataStructs.tempTargetStruct] = []
+    var untetheredGraphData: [DataStructs.untetheredStruct] = []
     var predictionData: [ShareGlucoseData] = []
     var ztPredictionData: [ShareGlucoseData] = []
     var iobPredictionData: [ShareGlucoseData] = []
@@ -162,7 +164,8 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             infoManager: infoManager,
             statsModel: statsDisplayModel,
             onRefresh: { [weak self] in self?.refresh() },
-            onStatsTap: { [weak self] in self?.statsViewTapped() }
+            onStatsTap: { [weak self] in self?.statsViewTapped() },
+            onHubBannerTap: { [weak self] in self?.showHubSettings() }
         )
         let hosting = UIHostingController(rootView: mainView)
         // Exclude the keyboard from the hosting controller's safe area. Home has
@@ -299,8 +302,11 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             .sink { [weak self] _ in
                 self?.updateBGGraphSettings()
                 self?.updateBGGraph()
-                LiveActivityManager.shared.refreshFromCurrentState(reason: "range mode changed")
                 self?.updateStats()
+                #if !targetEnvironment(macCatalyst)
+                    // Recolor the Live Activity for the new range right away.
+                    LiveActivityManager.shared.refreshFromCurrentState(reason: LiveActivityManager.rangeModeChangedReason)
+                #endif
             }
             .store(in: &cancellables)
 
@@ -598,6 +604,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appMovedToBackground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(
             category: .general,
             message: "App moved to background (refreshType=\(Storage.shared.backgroundRefreshType.value.rawValue), lowPowerMode=\(ProcessInfo.processInfo.isLowPowerModeEnabled), backgroundRefreshStatus=\(Self.describe(UIApplication.shared.backgroundRefreshStatus)), \(ExitDiagnostics.memoryDescription()))"
@@ -609,16 +619,40 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         // We want to always come back to the home screen
         Observable.shared.selectedTabIndex.value = 0
 
-        if Storage.shared.backgroundRefreshType.value == .silentTune {
+        startBackgroundKeepAlive()
+
+        NightscoutSocketManager.shared.disconnect()
+        HubBundle.shared.stopListening()
+    }
+
+    /// Starts what the mode in effect uses in the background: the Silent Tune and the
+    /// background refresh that revives it, the background refresh that checks the hub
+    /// in Hub mode, and the background alerts.
+    func startBackgroundKeepAlive() {
+        let mode = BackgroundRefreshType.inEffect
+        if mode == .silentTune {
             backgroundTask.startBackgroundTask()
+        }
+
+        if mode == .silentTune || Storage.shared.backgroundRefreshType.value == .hub {
             BackgroundRefreshManager.shared.scheduleRefresh()
         }
 
-        if Storage.shared.backgroundRefreshType.value != .none {
+        if mode.keepsAppRunning {
             BackgroundAlertManager.shared.startBackgroundAlert()
         }
+    }
 
-        NightscoutSocketManager.shared.disconnect()
+    /// The mode in effect changed while the app may be in the background (the hub
+    /// stopped driving the alarms, or Hub mode ended): in the background, starts the
+    /// Silent Tune unless it already plays.
+    func backgroundModeChanged() {
+        guard UIApplication.shared.applicationState == .background,
+              BackgroundRefreshType.inEffect.keepsAppRunning,
+              !backgroundTask.isPlaying
+        else { return }
+        LogManager.shared.log(category: .general, message: "Background refresh mode in effect is now \(BackgroundRefreshType.inEffect.rawValue); starting its keep-alive")
+        startBackgroundKeepAlive()
     }
 
     // Migrations must only run when UserDefaults is accessible (i.e. after first unlock).
@@ -698,6 +732,13 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         // runMigrationsIfNeeded() will always pass. Catches the case where viewDidLoad
         // ran during a BGAppRefreshTask background launch and deferred migrations.
         runMigrationsIfNeeded()
+        HubBundle.shared.startListening()
+        HubClient.shared.retryUnregistrationWhileActive()
+        Task {
+            await HubClient.shared.readNotificationPermission()
+            await HubClient.shared.sync()
+            await HubWatchdog.check()
+        }
     }
 
     @objc func handleRemoteMealCommandDidComplete(_ notification: Notification) {
@@ -731,6 +772,10 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     @objc func appCameToForeground() {
+        // Redraw the home screen widget: free while the app is in the foreground,
+        // and it revives a widget whose timeline ran out.
+        WidgetBGStore.reloadWidget()
+
         LogManager.shared.log(category: .general, message: "App came to foreground")
 
         // BFU recovery (StorageReadiness.recover) is driven by AppDelegate before this
@@ -740,11 +785,13 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         // reset screenlock state if needed
         UIApplication.shared.isIdleTimerDisabled = Storage.shared.screenlockSwitchState.value
 
-        if Storage.shared.backgroundRefreshType.value == .silentTune {
+        // Hub mode runs the Silent Tune while the hub does not drive the alarms.
+        let selected = Storage.shared.backgroundRefreshType.value
+        if selected == .silentTune || selected == .hub {
             backgroundTask.stopBackgroundTask()
         }
 
-        if Storage.shared.backgroundRefreshType.value != .none {
+        if selected.keepsAppRunning || selected == .hub {
             BackgroundAlertManager.shared.stopBackgroundAlert()
         }
 
@@ -767,14 +814,33 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
                     self.versionAlert(message: "The current version has a critical issue and should be updated as soon as possible.")
                     Storage.shared.lastBlacklistNotificationShown.value = now
                     Storage.shared.lastVersionUpdateNotificationShown.value = now
+                    return
                 }
             } else if isNewer {
                 let lastVersionUpdateShown = Storage.shared.lastVersionUpdateNotificationShown.value ?? Date.distantPast
                 if now.timeIntervalSince(lastVersionUpdateShown) > 1_209_600 { // 2 weeks
                     self.versionAlert(message: "A new version is available: \(latestVersion ?? "Unknown"). It is recommended to update.")
                     Storage.shared.lastVersionUpdateNotificationShown.value = now
+                    return
                 }
             }
+            self.checkAndNotifyHubVersionStatus()
+        }
+    }
+
+    /// Reminds an admin phone every two weeks while a newer LF Hub is out for the hub's channel.
+    func checkAndNotifyHubVersionStatus() {
+        let hub = HubClient.shared
+        guard hub.isAdmin, let info = hub.hubInfo.value else { return }
+        Task { @MainActor in
+            guard let latest = await HubVersionManager.latestVersion(for: info),
+                  HubVersionManager.isOutdated(info, latest: latest) else { return }
+            let lastShown = Storage.shared.lastHubVersionUpdateNotificationShown.value ?? Date.distantPast
+            guard Date().timeIntervalSince(lastShown) > 1_209_600, // 2 weeks
+                  self.presentedViewController == nil else { return }
+            self.versionAlert(title: "LF Hub Update Available",
+                              message: "LF Hub \(latest) is available; the hub runs \(info.version). Pull the new image and restart the hub to update it.")
+            Storage.shared.lastHubVersionUpdateNotificationShown.value = Date()
         }
     }
 
@@ -848,6 +914,9 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
     }
 
     func updateBadge(val: Int) {
+        if HubClient.shared.drivesBadge, Storage.shared.appBadge.value {
+            return
+        }
         if Storage.shared.appBadge.value {
             let latestBG = String(val)
             UIApplication.shared.applicationIconBadgeNumber = Int(Localizer.removePeriodAndCommaForBadge(Localizer.toDisplayUnits(latestBG))) ?? val
@@ -861,13 +930,12 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             let latestBG = bgData[bgData.count - 1].sgv
             if Storage.shared.colorBGText.value {
                 let thresholds = UnitSettingsStore.shared.effectiveThresholds()
-                if Double(latestBG) >= thresholds.high {
-                    Observable.shared.bgTextColor.value = .yellow
-                } else if Double(latestBG) <= thresholds.low {
-                    Observable.shared.bgTextColor.value = .red
-                } else {
-                    Observable.shared.bgTextColor.value = .green
-                }
+                Observable.shared.bgTextColor.value = dynamicGlucoseColor(
+                    glucoseValue: Double(latestBG),
+                    low: thresholds.low,
+                    target: thresholds.target,
+                    high: thresholds.high
+                )
             } else {
                 Observable.shared.bgTextColor.value = .primary
             }
@@ -974,22 +1042,8 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         eventTitle = eventTitle.replacingOccurrences(of: "%COB%", with: latestCOB?.formattedValue() ?? "0")
         eventTitle = eventTitle.replacingOccurrences(of: "%BASAL%", with: basal)
 
-        // Delete Events from last 2 hours and 2 hours in future
-        let deleteStartDate = Date().addingTimeInterval(-60 * 60 * 2)
-        let deleteEndDate = Date().addingTimeInterval(60 * 60 * 2)
         // guard solves for some ios upgrades removing the calendar
-        guard let deleteCalendar = store.calendar(withIdentifier: Storage.shared.calendarIdentifier.value) as? EKCalendar else { return }
-        let predicate2 = store.predicateForEvents(withStart: deleteStartDate, end: deleteEndDate, calendars: [deleteCalendar])
-        let eVDelete = store.events(matching: predicate2) as [EKEvent]?
-        if eVDelete != nil {
-            for i in eVDelete! {
-                do {
-                    try store.remove(i, span: EKSpan.thisEvent, commit: true)
-                } catch {
-                    LogManager.shared.log(category: .calendar, message: "Failed to remove calendar event: \(error.localizedDescription)")
-                }
-            }
-        }
+        guard removeCalendarEvents() else { return }
 
         // Write New Event
         let event = EKEvent(eventStore: store)
@@ -1006,6 +1060,27 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
             let msg = "Error storing to calendar: \(error.localizedDescription) (\(error))"
             LogManager.shared.log(category: .calendar, message: msg)
         }
+    }
+
+    /// Deletes the events from 2 hours ago to 2 hours ahead on the chosen calendar.
+    /// False when that calendar no longer exists.
+    @discardableResult
+    func removeCalendarEvents() -> Bool {
+        let deleteStartDate = Date().addingTimeInterval(-60 * 60 * 2)
+        let deleteEndDate = Date().addingTimeInterval(60 * 60 * 2)
+        guard let deleteCalendar = store.calendar(withIdentifier: Storage.shared.calendarIdentifier.value) else { return false }
+        let predicate2 = store.predicateForEvents(withStart: deleteStartDate, end: deleteEndDate, calendars: [deleteCalendar])
+        let eVDelete = store.events(matching: predicate2) as [EKEvent]?
+        if eVDelete != nil {
+            for i in eVDelete! {
+                do {
+                    try store.remove(i, span: EKSpan.thisEvent, commit: true)
+                } catch {
+                    LogManager.shared.log(category: .calendar, message: "Failed to remove calendar event: \(error.localizedDescription)")
+                }
+            }
+        }
+        return true
     }
 
     func userNotificationCenter(_: UNUserNotificationCenter, didReceive _: UNNotificationResponse, withCompletionHandler _: @escaping () -> Void) {}
@@ -1153,6 +1228,17 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
         setupDexcomButton?.isHidden = true
     }
 
+    /// Opens the LF Hub page from Home's banner.
+    private func showHubSettings() {
+        guard presentedViewController == nil else { return }
+        let hostingController = UIHostingController(rootView: HubSettingsSheet { [weak self] in
+            self?.dismiss(animated: true)
+        })
+        hostingController.overrideUserInterfaceStyle = Storage.shared.appearanceMode.value.userInterfaceStyle
+        hostingController.modalPresentationStyle = .pageSheet
+        present(hostingController, animated: true)
+    }
+
     @objc private func setupNightscoutTapped() {
         let navController = UINavigationController()
         let nightscoutSettingsView = NightscoutSettingsView(viewModel: .init(), usesModalCloseButton: true, onContinueToUnits: { [weak navController] in
@@ -1269,7 +1355,7 @@ class MainViewController: UIViewController, UNUserNotificationCenterDelegate {
 extension MainViewController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_: AVSpeechSynthesizer, didFinish _: AVSpeechUtterance) {
         let appState = UIApplication.shared.applicationState
-        let isSilentTuneMode = Storage.shared.backgroundRefreshType.value == .silentTune
+        let isSilentTuneMode = BackgroundRefreshType.inEffect == .silentTune
 
         if isSilentTuneMode, appState == .background {
             LogManager.shared.log(category: .general, message: "Silent tune active in background; not deactivating session.", isDebug: true)

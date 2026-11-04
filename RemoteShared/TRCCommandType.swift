@@ -10,6 +10,8 @@ enum TRCCommandType: String, Encodable {
     case meal
     case startOverride = "start_override"
     case cancelOverride = "cancel_override"
+    case startWeekendProfile = "start_weekend_profile"
+    case stopWeekendProfile = "stop_weekend_profile"
     case editMeal = "edit_meal"
     case deleteMeal = "delete_meal"
 
@@ -26,6 +28,8 @@ enum TRCCommandType: String, Encodable {
         case .meal: return "Meal"
         case .startOverride: return "Start Override"
         case .cancelOverride: return "Cancel Override"
+        case .startWeekendProfile: return "Start Profile"
+        case .stopWeekendProfile: return "Stop Profile"
         case .editMeal: return "Edit Meal"
         case .deleteMeal: return "Delete Meal"
         }

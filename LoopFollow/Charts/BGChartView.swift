@@ -815,8 +815,9 @@ private struct MainBGChart: View {
     }
 
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
+    /// Time leads the entry, then the label and value, so the pill reads "when, then what".
     private func bgPillText(for point: BGChartModel.BGPoint) -> String {
-        "BG\n\(Localizer.toDisplayUnits(String(Int(point.value))))\n\(model.pillTimeString(for: point.date))"
+        "\(model.pillTimeString(for: point.date))\nBG\n\(Localizer.toDisplayUnits(String(Int(point.value))))"
     }
 
     private func bandPillTexts(at date: Date) -> [String] {
@@ -831,6 +832,9 @@ private struct MainBGChart: View {
             .filter({ date >= $0.start && date <= $0.end })
             .max(by: { $0.start < $1.start })
         {
+            texts.append(band.pillText)
+        }
+        if let band = model.untethered.last(where: { date >= $0.start && date <= $0.end }) {
             texts.append(band.pillText)
         }
         return texts
@@ -862,16 +866,24 @@ private struct MainBGChart: View {
                 return SelectionAnchor(date: date, value: midY, texts: [band.pillText], detail: band.detail)
             }
         }
+        for band in model.untethered where date >= band.start && date <= band.end {
+            if value >= band.yBottom, value <= band.yTop {
+                let midY = (band.yTop + band.yBottom) / 2
+                return SelectionAnchor(date: date, value: midY, texts: [band.pillText], detail: band.detail)
+            }
+        }
         return nil
     }
 
     /// Scrub lookup (time-only). The finger resolves to the grid mark whose
     /// block contains the scrub time (see BGChartScrubSlots); the indicator
-    /// stands on the mark. The pill stacks every treatment in the block, then
-    /// every BG reading in it, then any band at the mark, so it is constant
-    /// across the block. The indicator's height comes from the reading nearest
-    /// the mark, else the nearest treatment, else the band; an empty block
-    /// shows nothing.
+    /// stands on the mark. A tap stacks every BG reading in the block first
+    /// (each already time-first, see bgPillText), then every treatment in it,
+    /// then any band at the mark. While scrubbing, the BG display and info
+    /// table show the values at the scrubbed time, so the pill leaves out the
+    /// readings. The pill is constant across the block. The indicator's height
+    /// comes from the reading nearest the mark, else the nearest treatment,
+    /// else the band; an empty block shows nothing.
     private enum SelectionPurpose {
         /// Press-and-hold scrubbing: how things were at that time.
         case scrub
@@ -892,8 +904,10 @@ private struct MainBGChart: View {
         let bandTexts = bandPillTexts(at: mark)
 
         // Scrubbing shows no pill: the BG display and info table show the
-        // values at the scrubbed time. A tap lists what happened there.
-        let texts = purpose == .tap ? treatments.map(\.pillText) + readings.map(bgPillText) + bandTexts : []
+        // values at the scrubbed time. A tap lists what happened there: the
+        // readings first (see bgPillText), then whatever treatments -- an SMB,
+        // a bolus, etc. -- fall in the same block, then any band.
+        let texts = purpose == .tap ? readings.map(bgPillText) + treatments.map(\.pillText) + bandTexts : []
 
         func distanceToMark(_ date: Date) -> TimeInterval { abs(date.timeIntervalSince(mark)) }
 
@@ -1021,7 +1035,7 @@ private struct MainBGChart: View {
             let visibleStart = interaction.scrollPosition
             let visibleEnd = interaction.scrollPosition.addingTimeInterval(interaction.visibleSeconds)
 
-            ForEach(model.overrides.filter { $0.end >= visibleStart && $0.start <= visibleEnd }) { band in
+            ForEach((model.overrides + model.untethered).filter { $0.end >= visibleStart && $0.start <= visibleEnd }) { band in
                 let visibleBandStart = max(band.start, visibleStart)
                 let visibleBandEnd = min(band.end, visibleEnd)
                 let xStart = xPosition(for: visibleBandStart, viewportWidth: viewportWidth)
@@ -1269,6 +1283,7 @@ private struct BGChartCanvas: View, Equatable {
                 bgBandMarks
                 basalMarks
                 scheduledBasalMarks
+                scheduledTargetMarks
             }
             coneMarks
             if !isSmall {
@@ -1393,7 +1408,7 @@ private struct BGChartCanvas: View, Equatable {
                 yStart: .value("yBottom", band.yBottom),
                 yEnd: .value("yTop", band.yTop)
             )
-            .foregroundStyle(model.overrideColor.opacity(0.6))
+            .foregroundStyle(band.color.opacity(0.6))
         }
 
         ForEach(model.tempTargets.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
@@ -1403,7 +1418,17 @@ private struct BGChartCanvas: View, Equatable {
                 yStart: .value("yBottom", band.yBottom),
                 yEnd: .value("yTop", band.yTop)
             )
-            .foregroundStyle(model.tempTargetColor.opacity(0.5))
+            .foregroundStyle(band.color.opacity(0.5))
+        }
+
+        ForEach(model.untethered.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
+            RectangleMark(
+                xStart: .value("start", band.start),
+                xEnd: .value("end", band.end),
+                yStart: .value("yBottom", band.yBottom),
+                yEnd: .value("yTop", band.yTop)
+            )
+            .foregroundStyle(band.color.opacity(0.6))
         }
     }
 
@@ -1430,6 +1455,19 @@ private struct BGChartCanvas: View, Equatable {
             )
             .lineStyle(StrokeStyle(lineWidth: 2, dash: [10, 5]))
             .foregroundStyle(Color.blue.opacity(0.8))
+        }
+    }
+
+    @ChartContentBuilder
+    private var scheduledTargetMarks: some ChartContent {
+        ForEach(windowedLine(model.targetScheduled) { $0.date }) { pt in
+            LineMark(
+                x: .value("time", pt.date),
+                y: .value("target", pt.value),
+                series: .value("series", "targetScheduled")
+            )
+            .lineStyle(StrokeStyle(lineWidth: 2, dash: [10, 5]))
+            .foregroundStyle(Color.green.opacity(0.8))
         }
     }
 

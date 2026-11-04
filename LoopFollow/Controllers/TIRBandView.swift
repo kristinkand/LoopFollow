@@ -2,10 +2,11 @@
 // TIRBandView.swift
 
 import SwiftUI
+import UIKit
 
-/// Time in Range band for the home screen: today's in-range
+/// Trio-style Time in Range band for the home screen: today's in-range
 /// percentage above a segmented bar (very low / low / in range / high / very high).
-/// The range follows the Range Mode in Settings (TIR, TITR or Custom).
+/// The range follows the Range Mode in Settings (TIR, TITR, TING or Custom).
 /// Tapping opens the statistics screen.
 struct TIRBandView: View {
     @ObservedObject var model: StatsDisplayModel
@@ -19,12 +20,27 @@ struct TIRBandView: View {
     private var segments: [(color: Color, fraction: CGFloat)] {
         guard model.bandHasData else { return [(Color.secondary.opacity(0.3), 1)] }
         return [
-            (TIRGraphView.Band.veryLow.color, CGFloat(model.bandVeryLowPct / 100)),
-            (TIRGraphView.Band.low.color, CGFloat(model.bandLowPct / 100)),
-            (TIRGraphView.Band.inRange.color, CGFloat(model.bandInRangePct / 100)),
-            (TIRGraphView.Band.high.color, CGFloat(model.bandHighPct / 100)),
-            (TIRGraphView.Band.veryHigh.color, CGFloat(model.bandVeryHighPct / 100)),
+            (BandColors.veryLow, CGFloat(model.bandVeryLowPct / 100)),
+            (BandColors.low, CGFloat(model.bandLowPct / 100)),
+            (BandColors.inRange, CGFloat(model.bandInRangePct / 100)),
+            (BandColors.high, CGFloat(model.bandHighPct / 100)),
+            (BandColors.veryHigh, CGFloat(model.bandVeryHighPct / 100)),
         ]
+    }
+
+    /// Tones of the dynamic glucose gradient used by the graph, BG text, widget and Live
+    /// Activity (see `dynamicGlucoseColor`): red below low, orange just above it, green at
+    /// target, purple above high. Very high is a darker purple so it stays distinct from high.
+    private enum BandColors {
+        static let veryLow = tone(hue: 0)
+        static let low = tone(hue: 30)
+        static let inRange = tone(hue: 120)
+        static let high = tone(hue: 270)
+        static let veryHigh = tone(hue: 270, saturation: 0.75, brightness: 0.65)
+
+        private static func tone(hue degrees: CGFloat, saturation: CGFloat = 0.6, brightness: CGFloat = 0.9) -> Color {
+            Color(uiColor: UIColor(hue: degrees / 360, saturation: saturation, brightness: brightness, alpha: 1))
+        }
     }
 
     var body: some View {

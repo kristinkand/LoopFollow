@@ -17,6 +17,12 @@ class DataStructs {
         var endDate: TimeInterval
     }
 
+    struct targetProfileSegment: Codable {
+        var targetHigh: Double
+        var startDate: TimeInterval
+        var endDate: TimeInterval
+    }
+
     // NS Timestamp Only Data  Struct
     struct timestampOnlyStruct: Codable {
         var date: TimeInterval
@@ -52,6 +58,14 @@ class DataStructs {
         var scheduledEndDate: TimeInterval?
         /// The Treatments list entry this band opens.
         var detail: Treatment? = nil
+    }
+
+    /// A time Trio's Apple Watch app had the pump (untethered), from Trio's "Untethered Watch" treatment.
+    struct untetheredStruct {
+        var date: TimeInterval
+        var endDate: TimeInterval
+        /// No end uploaded yet: the watch still has the pump, and the band runs to now.
+        var ongoing: Bool
     }
 
     struct tempTargetStruct {

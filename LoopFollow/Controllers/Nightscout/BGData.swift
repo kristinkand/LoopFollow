@@ -61,7 +61,7 @@ extension MainViewController {
     // NS BG Data Web call
     func webLoadNSBGData(dexData: [ShareGlucoseData] = []) {
         // This kicks it out in the instance where dexcom fails but they aren't using NS &&
-        if !IsNightscoutEnabled() {
+        if !IsNightscoutEnabled(), !HubBundle.shared.hasCurrent(.entries) {
             BannerManager.shared.clear(.nightscout)
             Storage.shared.lastBGChecked.value = Date()
             return
@@ -75,7 +75,7 @@ extension MainViewController {
         // Exclude 'cal' entries
         parameters["find[type][$ne]"] = "cal"
 
-        NightscoutUtils.executeRequest(eventType: .sgv, parameters: parameters) { (result: Result<[ShareGlucoseData], Error>) in
+        NightscoutUtils.executeRequest(eventType: .sgv, parameters: parameters, hubPart: .entries) { (result: Result<[ShareGlucoseData], Error>) in
             switch result {
             case let .success(entriesResponse):
                 BannerManager.shared.clear(.nightscout)
@@ -317,8 +317,15 @@ extension MainViewController {
 
             // Live Activity storage
             Storage.shared.lastBgReadingTimeSeconds.value = lastBGTime
+            Storage.shared.lastBgMgdl.value = Double(latestBG)
             Storage.shared.lastDeltaMgdl.value = Double(deltaBG)
             Storage.shared.lastTrendCode.value = entries[latestEntryIndex].direction
+
+            // Live Activity Lock Screen mini graph: last 6 hours of readings.
+            let sixHoursAgo = lastBGTime - 6 * 3600
+            Storage.shared.lastBgHistory.value = entries
+                .filter { $0.date >= sixHoursAgo }
+                .map { LAHistoryPoint(d: $0.date, v: $0.sgv) }
 
             // Mark BG data as loaded for initial loading state
             self.markDataLoaded("bg")
@@ -328,8 +335,11 @@ extension MainViewController {
                 LiveActivityManager.shared.refreshFromCurrentState(reason: "bg")
             #endif
 
+            // Home screen widget
+            self.updateHomeScreenWidget(entries: entries, deltaBG: deltaBG)
+
             // Update contact
-            if Storage.shared.contactEnabled.value {
+            if Storage.shared.contactEnabled.value, !HubClient.shared.isHubMode {
                 self.contactImageUpdater
                     .updateContactImage(
                         bgValue: Observable.shared.bgText.value,

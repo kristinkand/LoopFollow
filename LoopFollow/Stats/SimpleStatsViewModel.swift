@@ -165,6 +165,13 @@ class SimpleStatsViewModel: ObservableObject {
             return (dailyProgrammedBasal, dataService.daysToAnalyze, 0.0, 0.0)
         }
 
+        // Set up once for all temp basals: a long period holds tens of thousands of them
+        // (one every 5 minutes), and building the calendar, sorting the profile and finding
+        // midnight for each one kept the main thread busy long enough for the watchdog to end
+        // the app (0x8BADF00D, 2026-10-28).
+        let sortedProfile = basalProfile.sorted { $0.timeAsSeconds < $1.timeAsSeconds }
+        var days = DayStartCache(calendar: dateTimeUtils.displayCalendar())
+
         // Calculate total adjustment from all temp basals
         var totalAdjustment = 0.0
         var totalPositiveAdjustment = 0.0
@@ -183,7 +190,8 @@ class SimpleStatsViewModel: ObservableObject {
                 tempRate: tempBasal.rate,
                 startTime: effectiveStart,
                 endTime: effectiveEnd,
-                profile: basalProfile
+                sortedProfile: sortedProfile,
+                days: &days
             )
             totalAdjustment += adjustment
 
@@ -195,12 +203,9 @@ class SimpleStatsViewModel: ObservableObject {
         }
 
         // Calculate days with data
-        let calendar = dateTimeUtils.displayCalendar()
-        var uniqueDays = Set<Date>()
+        var uniqueDays = Set<TimeInterval>()
         for tempBasal in relevantTempBasals {
-            let dateObj = Date(timeIntervalSince1970: tempBasal.startTime)
-            let dayStart = calendar.startOfDay(for: dateObj)
-            uniqueDays.insert(dayStart)
+            uniqueDays.insert(days.dayStart(for: tempBasal.startTime))
         }
         let daysWithData = min(uniqueDays.count, dataService.daysToAnalyze)
 
@@ -216,20 +221,21 @@ class SimpleStatsViewModel: ObservableObject {
         tempRate: Double,
         startTime: TimeInterval,
         endTime: TimeInterval,
-        profile: [MainViewController.basalProfileStruct]
+        sortedProfile: [MainViewController.basalProfileStruct],
+        days: inout DayStartCache
     ) -> Double {
-        guard !profile.isEmpty, endTime > startTime else { return 0.0 }
+        guard !sortedProfile.isEmpty, endTime > startTime else { return 0.0 }
 
         var totalAdjustment = 0.0
-        let sortedProfile = profile.sorted { $0.timeAsSeconds < $1.timeAsSeconds }
-        let calendar = dateTimeUtils.displayCalendar()
 
         var currentTime = startTime
         while currentTime < endTime {
-            let dayStartDate = calendar.startOfDay(for: Date(timeIntervalSince1970: currentTime))
-            guard let nextDayStartDate = calendar.date(byAdding: .day, value: 1, to: dayStartDate) else { break }
-            let dayStart = dayStartDate.timeIntervalSince1970
-            let nextDayStart = nextDayStartDate.timeIntervalSince1970
+            // The next day by the calendar, not 24 hours on: a DST fall-back day has 25 hours,
+            // and stepping 24 hours from its midnight stays inside it for good (#795).
+            let day = days.day(for: currentTime)
+            let dayStart = day.start
+            let nextDayStart = day.next
+            guard nextDayStart > currentTime else { break }
 
             // Process each profile segment for this day
             for i in 0 ..< sortedProfile.count {
@@ -296,15 +302,13 @@ class SimpleStatsViewModel: ObservableObject {
     private func calculateActualDaysCovered(dates: [TimeInterval], requestedDays: Int) -> Int {
         guard !dates.isEmpty else { return requestedDays }
 
-        let calendar = dateTimeUtils.displayCalendar()
+        var days = DayStartCache(calendar: dateTimeUtils.displayCalendar())
         let cutoffTime = dataService.startDate.timeIntervalSince1970
         let filteredDates = dates.filter { $0 >= cutoffTime }
 
-        var uniqueDays = Set<Date>()
+        var uniqueDays = Set<TimeInterval>()
         for date in filteredDates {
-            let dateObj = Date(timeIntervalSince1970: date)
-            let dayStart = calendar.startOfDay(for: dateObj)
-            uniqueDays.insert(dayStart)
+            uniqueDays.insert(days.dayStart(for: date))
         }
 
         return min(uniqueDays.count, requestedDays)
@@ -334,5 +338,35 @@ class SimpleStatsViewModel: ObservableObject {
         }
 
         return totalBasal
+    }
+}
+
+/// Local midnight for a run of timestamps in the display time zone. Treatments arrive in
+/// time order, so most lookups fall in the day found last and skip the calendar.
+struct DayStartCache {
+    let calendar: Calendar
+    private var cachedStart: TimeInterval = 0
+    private var cachedEnd: TimeInterval = -1
+
+    init(calendar: Calendar) {
+        self.calendar = calendar
+    }
+
+    /// The start of the day holding `time`, as `calendar.startOfDay` gives it.
+    mutating func dayStart(for time: TimeInterval) -> TimeInterval {
+        day(for: time).start
+    }
+
+    /// The day holding `time`: its midnight and the next one, a calendar day apart, so a
+    /// daylight-saving day is 23 or 25 hours long.
+    mutating func day(for time: TimeInterval) -> (start: TimeInterval, next: TimeInterval) {
+        if time >= cachedStart, time < cachedEnd {
+            return (cachedStart, cachedEnd)
+        }
+        let start = calendar.startOfDay(for: Date(timeIntervalSince1970: time))
+        let next = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60)
+        cachedStart = start.timeIntervalSince1970
+        cachedEnd = next.timeIntervalSince1970
+        return (cachedStart, cachedEnd)
     }
 }

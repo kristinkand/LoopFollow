@@ -11,6 +11,9 @@ import HealthKit
 class Storage {
     var remoteType = StorageValue<RemoteType>(key: "remoteType", defaultValue: .none)
     var deviceToken = StorageValue<String>(key: "deviceToken", defaultValue: "")
+    /// Trio's watch app, from the Nightscout profile; empty without one.
+    var watchDeviceToken = StorageValue<String>(key: "watchDeviceToken", defaultValue: "")
+    var watchBundleId = StorageValue<String>(key: "watchBundleId", defaultValue: "")
     var expirationDate = StorageValue<Date?>(key: "expirationDate", defaultValue: nil)
     var sharedSecret = StorageValue<String>(key: "sharedSecret", defaultValue: "")
     var productionEnvironment = StorageValue<Bool>(key: "productionEnvironment", defaultValue: false)
@@ -20,6 +23,8 @@ class Storage {
 
     var lfApnsKey = StorageValue<String>(key: "lfApnsKey", defaultValue: "")
     var lfKeyId = StorageValue<String>(key: "lfKeyId", defaultValue: "")
+
+    var hubURL = StorageValue<String>(key: "hubURL", defaultValue: "")
     var bundleId = StorageValue<String>(key: "bundleId", defaultValue: "")
     var user = StorageValue<String>(key: "user", defaultValue: "")
     /// Remote command types the AID app advertises in its Nightscout profile.
@@ -78,8 +83,8 @@ class Storage {
     var colorBGText = StorageValue<Bool>(key: "colorBGText", defaultValue: true)
     var appearanceMode = StorageValue<AppearanceMode>(key: "appearanceMode", defaultValue: .dark)
     var showStats = StorageValue<Bool>(key: "showStats", defaultValue: true)
-    /// Show the home screen stats as a Time in Range band instead of the statistics box.
-    var showTIRBand = StorageValue<Bool>(key: "showTIRBand", defaultValue: false)
+    /// Show stats as a Trio-style Time in Range band instead of the statistics box.
+    var showTIRBand = StorageValue<Bool>(key: "showTIRBand", defaultValue: true)
     /// Period both home screen stats (statistics box and Time in Range band) cover:
     /// the last 24 hours, or today since midnight.
     var statsSinceMidnight = StorageValue<Bool>(key: "statsSinceMidnight", defaultValue: false)
@@ -105,6 +110,7 @@ class Storage {
     var lastBgReadingTimeSeconds = StorageValue<TimeInterval?>(key: "lastBgReadingTimeSeconds", defaultValue: nil)
     var lastDeltaMgdl = StorageValue<Double?>(key: "lastDeltaMgdl", defaultValue: nil)
     var lastTrendCode = StorageValue<String?>(key: "lastTrendCode", defaultValue: nil)
+    var lastBgMgdl = StorageValue<Double?>(key: "lastBgMgdl", defaultValue: nil)
     var lastIOB = StorageValue<Double?>(key: "lastIOB", defaultValue: nil)
     var lastCOB = StorageValue<Double?>(key: "lastCOB", defaultValue: nil)
     var projectedBgMgdl = StorageValue<Double?>(key: "projectedBgMgdl", defaultValue: nil)
@@ -128,6 +134,8 @@ class Storage {
     // Live Activity
     var laEnabled = StorageValue<Bool>(key: "laEnabled", defaultValue: false)
     var laRenewBy = StorageValue<TimeInterval>(key: "laRenewBy", defaultValue: 0)
+    /// The activity `laRenewBy` belongs to.
+    var laBoundActivityId = StorageValue<String>(key: "laBoundActivityId", defaultValue: "")
     var laRenewalFailed = StorageValue<Bool>(key: "laRenewalFailed", defaultValue: false)
     var laPushToStartToken = StorageValue<String>(key: "laPushToStartToken", defaultValue: "")
     var laLastPushToStartAt = StorageValue<TimeInterval>(key: "laLastPushToStartAt", defaultValue: 0)
@@ -158,6 +166,8 @@ class Storage {
     var minBGScale = StorageValue<Double>(key: "minBGScale", defaultValue: 250.0)
     var lowLine = StorageValue<Double>(key: "lowLine", defaultValue: 70.0)
     var highLine = StorageValue<Double>(key: "highLine", defaultValue: 180.0)
+    var targetLine = StorageValue<Double>(key: "targetLine", defaultValue: 100.0)
+    var lastBgHistory = StorageValue<[LAHistoryPoint]>(key: "lastBgHistory", defaultValue: [])
     var downloadDays = StorageValue<Int>(key: "downloadDays", defaultValue: 1)
     var graphTimeZoneEnabled = StorageValue<Bool>(key: "graphTimeZoneEnabled", defaultValue: false)
     var graphTimeZoneIdentifier = StorageValue<String>(key: "graphTimeZoneIdentifier", defaultValue: TimeZone.current.identifier)
@@ -185,6 +195,7 @@ class Storage {
     var downloadTreatments = StorageValue<Bool>(key: "downloadTreatments", defaultValue: true)
     var graphOtherTreatments = StorageValue<Bool>(key: "graphOtherTreatments", defaultValue: true)
     var graphBasal = StorageValue<Bool>(key: "graphBasal", defaultValue: true)
+    var graphTargetLine = StorageValue<Bool>(key: "graphTargetLine", defaultValue: true)
     var graphBolus = StorageValue<Bool>(key: "graphBolus", defaultValue: true)
     var graphCarbs = StorageValue<Bool>(key: "graphCarbs", defaultValue: true)
     var bgUpdateDelay = StorageValue<Int>(key: "bgUpdateDelay", defaultValue: 10)
@@ -203,6 +214,10 @@ class Storage {
     var lastBlacklistNotificationShown = StorageValue<Date?>(key: "lastBlacklistNotificationShown", defaultValue: nil)
     var lastVersionUpdateNotificationShown = StorageValue<Date?>(key: "lastVersionUpdateNotificationShown", defaultValue: nil)
     var lastExpirationNotificationShown = StorageValue<Date?>(key: "lastExpirationNotificationShown", defaultValue: nil)
+    var hubLatestVersion = StorageValue<String?>(key: "hubLatestVersion", defaultValue: nil)
+    var hubLatestVersionBranch = StorageValue<String?>(key: "hubLatestVersionBranch", defaultValue: nil)
+    var hubLatestVersionChecked = StorageValue<Date?>(key: "hubLatestVersionChecked", defaultValue: nil)
+    var lastHubVersionUpdateNotificationShown = StorageValue<Date?>(key: "lastHubVersionUpdateNotificationShown", defaultValue: nil)
 
     // MARK: - Telemetry -----------------------------------------------------------
 
@@ -271,6 +286,195 @@ class Storage {
 
     static let shared = Storage()
     private init() {}
+
+    /// Set to true at launch if isProtectedDataAvailable was false (BFU state).
+    /// Consumed and cleared on the first foreground after that launch.
+    var needsBFUReload = false
+
+    /// Re-reads every StorageValue from UserDefaults, firing @Published only where the value
+    /// actually changed. Call this when foregrounding after a Before-First-Unlock (BFU) background
+    /// launch, where Storage was initialized while UserDefaults was encrypted and all values were
+    /// cached as their defaults.
+    ///
+    /// `migrationStep` is intentionally excluded: viewDidLoad writes it to 6 during the BFU
+    /// launch; if we reloaded it and the flush had somehow not landed yet, migrations would re-run.
+    ///
+    /// SecureStorageValue properties (maxBolus, maxCarbs, maxProtein, maxFat, bolusIncrement) are
+    /// not covered here — SecureStorageValue does not implement reload() and Keychain has the same
+    /// BFU inaccessibility; that is a separate problem.
+    func reloadAll() {
+        remoteType.reload()
+        deviceToken.reload()
+        expirationDate.reload()
+        sharedSecret.reload()
+        productionEnvironment.reload()
+        remoteApnsKey.reload()
+        teamId.reload()
+        remoteKeyId.reload()
+
+        lfApnsKey.reload()
+        lfKeyId.reload()
+        bundleId.reload()
+        user.reload()
+
+        mealWithBolus.reload()
+        mealWithFatProtein.reload()
+        hasSeenFatProteinOrderChange.reload()
+
+        backgroundRefreshType.reload()
+        selectedBLEDevice.reload()
+        debugLogLevel.reload()
+
+        contactTrend.reload()
+        contactDelta.reload()
+        contactEnabled.reload()
+        contactBackgroundColor.reload()
+        contactTextColor.reload()
+
+        sensorScheduleOffset.reload()
+        alarms.reload()
+        alarmConfiguration.reload()
+
+        lastOverrideStartNotified.reload()
+        lastOverrideEndNotified.reload()
+        lastTempTargetStartNotified.reload()
+        lastTempTargetEndNotified.reload()
+        lastRecBolusNotified.reload()
+        lastCOBNotified.reload()
+        lastMissedBolusNotified.reload()
+
+        appBadge.reload()
+        colorBGText.reload()
+        appearanceMode.reload()
+        showStats.reload()
+        showTIRBand.reload()
+        statsSinceMidnight.reload()
+        useIFCC.reload()
+        showSmallGraph.reload()
+        screenlockSwitchState.reload()
+        showDisplayName.reload()
+        snoozerEmoji.reload()
+        forcePortraitMode.reload()
+
+        speakBG.reload()
+        speakBGAlways.reload()
+        speakLowBG.reload()
+        speakProactiveLowBG.reload()
+        speakFastDropDelta.reload()
+        speakLowBGLimit.reload()
+        speakHighBGLimit.reload()
+        speakHighBG.reload()
+        speakLanguage.reload()
+
+        lastBgReadingTimeSeconds.reload()
+        lastDeltaMgdl.reload()
+        lastTrendCode.reload()
+        lastBgMgdl.reload()
+        lastIOB.reload()
+        lastCOB.reload()
+        projectedBgMgdl.reload()
+
+        lastBasal.reload()
+        lastPumpReservoirU.reload()
+        lastAutosens.reload()
+        lastTdd.reload()
+        lastTargetLowMgdl.reload()
+        lastTargetHighMgdl.reload()
+        lastIsfMgdlPerU.reload()
+        lastCarbRatio.reload()
+        lastCarbsToday.reload()
+        lastProfileName.reload()
+        iageInsertTime.reload()
+        lastMinBgMgdl.reload()
+        lastMaxBgMgdl.reload()
+
+        laEnabled.reload()
+        laRenewBy.reload()
+        laRenewalFailed.reload()
+
+        showDots.reload()
+        showLines.reload()
+        showValues.reload()
+        showAbsorption.reload()
+        showDIALines.reload()
+        show30MinLine.reload()
+        show90MinLine.reload()
+        showMidnightLines.reload()
+        smallGraphTreatments.reload()
+        smallGraphHeight.reload()
+        predictionToLoad.reload()
+        predictionDisplayType.reload()
+        minBasalScale.reload()
+        minBGScale.reload()
+        lowLine.reload()
+        highLine.reload()
+        downloadDays.reload()
+        graphTimeZoneEnabled.reload()
+        graphTimeZoneIdentifier.reload()
+
+        writeCalendarEvent.reload()
+        calendarIdentifier.reload()
+        watchLine1.reload()
+        watchLine2.reload()
+
+        shareUserName.reload()
+        sharePassword.reload()
+        shareServer.reload()
+
+        chartScaleX.reload()
+
+        downloadTreatments.reload()
+        graphOtherTreatments.reload()
+        graphBasal.reload()
+        graphTargetLine.reload()
+        graphBolus.reload()
+        graphCarbs.reload()
+        bgUpdateDelay.reload()
+
+        cageInsertTime.reload()
+        sageInsertTime.reload()
+
+        cachedForVersion.reload()
+        latestVersion.reload()
+        latestVersionChecked.reload()
+        currentVersionBlackListed.reload()
+        lastBlacklistNotificationShown.reload()
+        lastVersionUpdateNotificationShown.reload()
+        lastExpirationNotificationShown.reload()
+
+        hideInfoTable.reload()
+        token.reload()
+        units.reload()
+        infoDisplayItems.reload()
+
+        url.reload()
+        device.reload()
+        nsWriteAuth.reload()
+        nsAdminAuth.reload()
+
+        // migrationStep intentionally excluded — see method comment above.
+
+        persistentNotification.reload()
+        persistentNotificationLastBGTime.reload()
+
+        lastLoopingChecked.reload()
+        lastBGChecked.reload()
+        lastLoopTime.reload()
+
+        homePosition.reload()
+        alarmsPosition.reload()
+        snoozerPosition.reload()
+        nightscoutPosition.reload()
+        remotePosition.reload()
+        statisticsPosition.reload()
+        treatmentsPosition.reload()
+
+        loopAPNSQrCodeURL.reload()
+        bolusIncrementDetected.reload()
+        showGMI.reload()
+        showStdDev.reload()
+        showTITR.reload()
+    }
 
     // MARK: - Tab Position Helpers
 

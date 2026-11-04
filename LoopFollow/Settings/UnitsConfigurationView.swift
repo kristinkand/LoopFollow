@@ -28,6 +28,7 @@ struct UnitsConfigurationView: View {
     @State private var glucoseUnit = UnitSettingsStore.shared.glucoseUnit
     @State private var lowValue = Storage.shared.lowLine.value
     @State private var highValue = Storage.shared.highLine.value
+    @State private var targetValue = Storage.shared.targetLine.value
 
     /// Formats a mg/dL threshold pair in the currently selected glucose unit,
     /// e.g. "70–180" or "3.9–10.0".
@@ -86,10 +87,21 @@ struct UnitsConfigurationView: View {
                     RangeModeRow(mode: rangeMode, bounds: rangeBounds(for: rangeMode))
                 }
                 .accessibilityLabel("Range Mode, \(rangeMode.title)")
+
+                BGPicker(
+                    title: "Target",
+                    range: 80 ... 120,
+                    value: $targetValue
+                )
+                .id(glucoseUnit)
+                .onChange(of: targetValue) { newValue in
+                    Storage.shared.targetLine.value = newValue
+                    Observable.shared.chartSettingsChanged.value = true
+                }
             } header: {
                 Text("Range")
             } footer: {
-                Text("Cut-offs in \(glucoseUnit.rawValue).")
+                Text("Cut-offs in \(glucoseUnit.rawValue). Target is the center point for the dynamic color gradient on the graph and BG value.")
             }
 
             Section {

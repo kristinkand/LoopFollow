@@ -54,6 +54,26 @@ class PushNotificationManager {
         sendEncryptedCommand(payload: payload, completion: RemoteCommandRefresh.following(.override, completion))
     }
 
+    func sendStartWeekendProfilePushNotification(completion: @escaping (Bool, String?) -> Void) {
+        let payload = CommandPayload(
+            user: user,
+            commandType: .startWeekendProfile,
+            timestamp: Date().timeIntervalSince1970,
+            returnNotification: ReturnNotificationInfo.loopFollow()
+        )
+        sendEncryptedCommand(payload: payload, completion: completion)
+    }
+
+    func sendStopWeekendProfilePushNotification(completion: @escaping (Bool, String?) -> Void) {
+        let payload = CommandPayload(
+            user: user,
+            commandType: .stopWeekendProfile,
+            timestamp: Date().timeIntervalSince1970,
+            returnNotification: ReturnNotificationInfo.loopFollow()
+        )
+        sendEncryptedCommand(payload: payload, completion: completion)
+    }
+
     func sendBolusPushNotification(bolusAmount: HKQuantity, completion: @escaping (Bool, String?) -> Void) {
         let bolusAmountDecimal = Decimal(bolusAmount.doubleValue(for: .internationalUnit()))
         let payload = CommandPayload(
@@ -63,7 +83,11 @@ class PushNotificationManager {
             bolusAmount: bolusAmountDecimal,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: RemoteCommandRefresh.following(.bolus(units: bolusAmount.doubleValue(for: .internationalUnit())), completion))
+        let summary = "bolus of \(InsulinFormatter.shared.string(bolusAmount.doubleValue(for: .internationalUnit()))) U"
+        sendEncryptedCommand(payload: payload, completion: expectingAnswer(payload, summary: summary, RemoteCommandRefresh.following(
+            .bolus(units: bolusAmount.doubleValue(for: .internationalUnit())),
+            completion
+        )))
     }
 
     func sendTempTargetPushNotification(target: HKQuantity, duration: HKQuantity, completion: @escaping (Bool, String?) -> Void) {
@@ -127,10 +151,11 @@ class PushNotificationManager {
             scheduledTime: scheduledTimeInterval,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: RemoteCommandRefresh.following(
+        let summary = bolusAmountValue == nil ? "meal" : "meal with a bolus"
+        sendEncryptedCommand(payload: payload, completion: expectingAnswer(payload, summary: summary, RemoteCommandRefresh.following(
             .meal(grams: Double(carbsValue ?? 0), bolus: bolusAmount.doubleValue(for: .internationalUnit())),
             completion
-        ))
+        )))
     }
 
     /// Trio confirms edit/delete through a return notification, so LoopFollow's own APNs credentials are required.
@@ -226,6 +251,53 @@ class PushNotificationManager {
         return keyLines.joined()
     }
 
+    /// A bolus, meal, override or temp target also goes straight to Trio's watch app when Trio uploaded its token: while the watch runs the
+    /// loop untethered it may be away from the phone, and acts on the copy that reaches it first. Without the pump it
+    /// leaves the command to the phone. The answer comes from whichever acted on it.
+    /// Once Apple took a command that asked for an answer, `TrioAnswerWatch` speaks up if none comes.
+    private func expectingAnswer(
+        _ payload: CommandPayload,
+        summary: String,
+        _ completion: @escaping (Bool, String?) -> Void
+    ) -> (Bool, String?) -> Void {
+        { success, message in
+            if success, payload.returnNotification != nil {
+                TrioAnswerWatch.shared.expect(payload.commandType, summary: summary)
+            }
+            completion(success, message)
+        }
+    }
+
+    private func sendToTrioWatch(encryptedData: String, commandType: TRCCommandType) {
+        let watchToken = Storage.shared.watchDeviceToken.value
+        let watchTopic = Storage.shared.watchBundleId.value
+        let toWatch: Set<TRCCommandType> = [.bolus, .meal, .startOverride, .cancelOverride, .tempTarget, .cancelTempTarget]
+        guard toWatch.contains(commandType), !watchToken.isEmpty, !watchTopic.isEmpty else { return }
+        do {
+            try APNSDelivery.send(
+                body: JSONEncoder().encode(SilentEncryptedPushMessage(encryptedData: encryptedData)),
+                deviceToken: watchToken,
+                topic: watchTopic,
+                production: productionEnvironment,
+                keyId: keyId,
+                teamId: teamId,
+                apnsKey: apnsKey,
+                // an absolute time, as Apple reads it: "600" (a moment in 1970) meant "already expired", so a watch
+                // that was briefly offline never got the copy. Kept as long as the watch would still act on it.
+                expiration: String(Int(Date().timeIntervalSince1970) + 600),
+                pushType: "background",
+                priority: "5"
+            ) { success, message in
+                LogManager.shared.log(
+                    category: .apns,
+                    message: success ? "Copy sent to Trio's watch app" : "Copy to Trio's watch app not sent: \(message ?? "")"
+                )
+            }
+        } catch {
+            LogManager.shared.log(category: .apns, message: "Copy to Trio's watch app not encoded: \(error.localizedDescription)")
+        }
+    }
+
     private func sendEncryptedCommand(payload: CommandPayload, completion: @escaping (Bool, String?) -> Void) {
         var missingFields = [String]()
         if sharedSecret.isEmpty { missingFields.append("sharedSecret") }
@@ -260,6 +332,7 @@ class PushNotificationManager {
 
             let encryptedDataString = try messenger.encrypt(payload)
             let finalMessage = EncryptedPushMessage(encryptedData: encryptedDataString, commandType: payload.commandType)
+            sendToTrioWatch(encryptedData: encryptedDataString, commandType: payload.commandType)
 
             try APNSDelivery.send(
                 body: JSONEncoder().encode(finalMessage),

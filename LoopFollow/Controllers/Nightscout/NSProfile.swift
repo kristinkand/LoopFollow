@@ -51,6 +51,9 @@ struct NSProfile: Decodable {
     let startDate: String?
     let createdAt: String?
     let remoteCommands: [String]?
+    /// Trio's Apple Watch app, for a bolus or meal sent straight to the watch while it runs the loop untethered.
+    let watchDeviceToken: String?
+    let watchBundleIdentifier: String?
 
     struct TrioOverrideEntry: Decodable {
         let name: String
@@ -103,5 +106,7 @@ struct NSProfile: Decodable {
         case startDate
         case createdAt = "created_at"
         case remoteCommands
+        case watchDeviceToken
+        case watchBundleIdentifier
     }
 }

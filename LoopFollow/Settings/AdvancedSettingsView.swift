@@ -11,6 +11,7 @@ struct AdvancedSettingsView: View {
             Section(header: Text("Advanced Settings")) {
                 Toggle("Download Treatments", isOn: $viewModel.downloadTreatments)
                 Toggle("Graph Basal", isOn: $viewModel.graphBasal)
+                Toggle("Graph Target Line", isOn: $viewModel.graphTargetLine)
                 Toggle("Graph Bolus", isOn: $viewModel.graphBolus)
                 Toggle("Graph Carbs", isOn: $viewModel.graphCarbs)
                 Toggle("Graph Other Treatments", isOn: $viewModel.graphOtherTreatments)

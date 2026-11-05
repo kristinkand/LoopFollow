@@ -1533,6 +1533,18 @@ private struct BGChartCanvas: View, Equatable {
                 .foregroundStyle(pt.color)
             }
         }
+        // readings the G7 marked unreliable, also with dots off: hollow, so they never read as real ones
+        ForEach(windowed(model.unreliable) { $0.date }) { pt in
+            PointMark(
+                x: .value("time", pt.date),
+                y: .value("bg", pt.value)
+            )
+            .symbol {
+                Circle()
+                    .strokeBorder(pt.color, lineWidth: 1.5)
+                    .frame(width: isSmall ? 5 : 8, height: isSmall ? 5 : 8)
+            }
+        }
     }
 
     @ChartContentBuilder

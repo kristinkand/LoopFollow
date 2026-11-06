@@ -817,7 +817,7 @@ private struct MainBGChart: View {
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
     /// Time leads the entry, then the label and value, so the pill reads "when, then what".
     private func bgPillText(for point: BGChartModel.BGPoint) -> String {
-        "\(model.pillTimeString(for: point.date))\nBG\n\(Localizer.toDisplayUnits(String(Int(point.value))))"
+        "\(model.pillTimeString(for: point.date))\n\(point.isManual ? "★ Manual BG" : "BG")\n\(Localizer.toDisplayUnits(String(Int(point.value))))"
     }
 
     /// A reading the G7 marked unreliable: its warning in place of "BG".
@@ -1540,13 +1540,25 @@ private struct BGChartCanvas: View, Equatable {
     @ChartContentBuilder
     private var bgPointsMark: some ChartContent {
         if model.showDots {
-            ForEach(windowed(model.bg) { $0.date }) { pt in
+            ForEach(windowed(model.bg.filter { !$0.isManual }) { $0.date }) { pt in
                 PointMark(
                     x: .value("time", pt.date),
                     y: .value("bg", pt.value)
                 )
                 .symbolSize(isSmall ? 14 : 30)
                 .foregroundStyle(pt.color)
+            }
+        }
+        // readings entered by hand (finger prick), also with dots off: a star, so they never read as CGM ones
+        ForEach(windowed(model.bg.filter(\.isManual)) { $0.date }) { pt in
+            PointMark(
+                x: .value("time", pt.date),
+                y: .value("bg", pt.value)
+            )
+            .symbol {
+                Image(systemName: "star.fill")
+                    .font(.system(size: isSmall ? 7 : 11))
+                    .foregroundStyle(pt.color)
             }
         }
         // readings the G7 marked unreliable, also with dots off: hollow, so they never read as real ones

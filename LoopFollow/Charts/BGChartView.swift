@@ -1567,11 +1567,10 @@ private struct BGChartCanvas: View, Equatable {
                 x: .value("time", pt.date),
                 y: .value("bg", pt.value)
             )
-            .symbol {
-                Circle()
-                    .strokeBorder(pt.color, lineWidth: 1.5)
-                    .frame(width: isSmall ? 5 : 8, height: isSmall ? 5 : 8)
-            }
+            // the size of the normal dots, only hollow
+            .symbol(.circle.strokeBorder(lineWidth: 1.5))
+            .symbolSize(isSmall ? 14 : 30)
+            .foregroundStyle(pt.color)
         }
     }
 

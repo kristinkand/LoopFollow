@@ -70,7 +70,7 @@ extension MainViewController {
     func updateDeviceStatusDisplay(jsonDeviceStatus: [[String: AnyObject]]) {
         let previousIOBText = Observable.shared.iobText.value
         let previousDeviceWasLoop = Storage.shared.device.value == "Loop"
-        infoManager.clearInfoData(types: [.iob, .cob, .battery, .pump, .pumpBattery, .target, .isf, .carbRatio, .updated, .recBolus, .tdd, .smoothedBG])
+        infoManager.clearInfoData(types: [.iob, .cob, .battery, .pump, .pumpBattery, .target, .isf, .carbRatio, .updated, .recBolus, .tdd, .smoothedBG, .watchBattery])
 
         // For Loop, clear the current override here - For Trio, it is handled using treatments
         if Storage.shared.device.value == "Loop" {
@@ -186,6 +186,15 @@ extension MainViewController {
                 if deviceBatteryData.count > 30 {
                     deviceBatteryData.removeFirst()
                 }
+            }
+
+            // Trio (exposed branches) adds the Apple Watch's battery while it is under an hour old
+            if let watch = lastDeviceStatus?["watchBattery"] as? [String: AnyObject],
+               let level = (watch["battery"] as? NSNumber)?.doubleValue
+            {
+                let charging = watch["isCharging"] as? Bool == true
+                let text = (charging ? "⚡️ " : "") + String(format: "%.0f", level) + "%"
+                infoManager.updateInfoData(type: .watchBattery, value: text, numericValue: level)
             }
         }
 

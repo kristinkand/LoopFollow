@@ -4,7 +4,7 @@
 import Foundation
 
 enum InfoType: Int, CaseIterable, Codable {
-    case iob, cob, basal, override, battery, pump, pumpBattery, sage, cage, recBolus, minMax, carbsToday, autosens, profile, target, isf, carbRatio, updated, tdd, iage, dbSize, smoothedBG, untethered
+    case iob, cob, basal, override, battery, pump, pumpBattery, sage, cage, recBolus, minMax, carbsToday, autosens, profile, target, isf, carbRatio, updated, tdd, iage, dbSize, smoothedBG, untethered, watchBattery
 
     var name: String {
         switch self {
@@ -31,12 +31,13 @@ enum InfoType: Int, CaseIterable, Codable {
         case .dbSize: return "DB Size"
         case .smoothedBG: return "Smoothed BG"
         case .untethered: return "Untethered"
+        case .watchBattery: return "Watch Battery"
         }
     }
 
     var defaultVisible: Bool {
         switch self {
-        case .iob, .cob, .basal, .override, .battery, .pump, .sage, .cage, .recBolus, .minMax, .carbsToday:
+        case .iob, .cob, .basal, .override, .battery, .pump, .sage, .cage, .recBolus, .minMax, .carbsToday, .watchBattery:
             return true
         default:
             return false
@@ -58,7 +59,7 @@ enum InfoType: Int, CaseIterable, Codable {
             return InfoColorConfig(direction: .above, unit: "U", range: 0 ... 20, step: 0.5, defaultWarning: 3, defaultUrgent: 5)
         case .cob:
             return InfoColorConfig(direction: .above, unit: "g", range: 0 ... 200, step: 1, defaultWarning: 30, defaultUrgent: 60)
-        case .battery, .pumpBattery:
+        case .battery, .pumpBattery, .watchBattery:
             return InfoColorConfig(direction: .below, unit: "%", range: 0 ... 100, step: 5, defaultWarning: 30, defaultUrgent: 15)
         case .pump:
             return InfoColorConfig(direction: .below, unit: "U", range: 0 ... 50, step: 1, defaultWarning: 20, defaultUrgent: 10)

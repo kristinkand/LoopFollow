@@ -45,6 +45,8 @@ final class BGChartModel: ObservableObject {
         let date: Date
         let value: Double
         let color: Color
+        /// Entered by hand (finger prick): drawn as a star and left out of the BG line.
+        var isManual = false
         var id: Double { date.timeIntervalSince1970 }
     }
 
@@ -458,8 +460,15 @@ final class BGChartModel: ObservableObject {
         func clampSgv(_ sgv: Int) -> Double { Double(min(max(sgv, minDisplay), maxDisplay)) }
 
         scrubSlots = BGChartScrubSlots(readingDates: vc.bgData.map { Date(timeIntervalSince1970: $0.date) })
-        bg = vc.bgData.map { BGPoint(date: Date(timeIntervalSince1970: $0.date), value: clampSgv($0.sgv), color: colorFor($0.sgv, thresholds: thresholds)) }
-        bgRuns = Self.makeRuns(bg)
+        bg = vc.bgData.map {
+            BGPoint(
+                date: Date(timeIntervalSince1970: $0.date),
+                value: clampSgv($0.sgv),
+                color: colorFor($0.sgv, thresholds: thresholds),
+                isManual: $0.isManual
+            )
+        }
+        bgRuns = Self.makeRuns(bg.filter { !$0.isManual })
         unreliable = vc.unreliableGraphData.map {
             BGPoint(date: Date(timeIntervalSince1970: $0.date), value: clampSgv($0.sgv), color: .orange)
         }

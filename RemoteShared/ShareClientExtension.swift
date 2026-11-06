@@ -10,6 +10,8 @@ public struct ShareGlucoseData: Decodable {
     var sgv: Int
     var date: TimeInterval
     var direction: String?
+    /// A Nightscout "mbg" entry: a reading entered by hand (finger prick), not from the CGM.
+    var isManual = false
 
     enum CodingKeys: String, CodingKey {
         case sgv // Sensor Blood Glucose
@@ -27,6 +29,7 @@ public struct ShareGlucoseData: Decodable {
             sgv = Int(glucoseValue.rounded())
         } else if let mbgValue = try? container.decode(Double.self, forKey: .mbg) {
             sgv = Int(mbgValue.rounded())
+            isManual = true
         } else if let mbgValue = try? container.decode(Double.self, forKey: .glucose) {
             sgv = Int(mbgValue.rounded())
         } else {
@@ -38,10 +41,11 @@ public struct ShareGlucoseData: Decodable {
         direction = try container.decodeIfPresent(String.self, forKey: .direction)
     }
 
-    public init(sgv: Int, date: TimeInterval, direction: String?) {
+    public init(sgv: Int, date: TimeInterval, direction: String?, isManual: Bool = false) {
         self.sgv = sgv
         self.date = date
         self.direction = direction
+        self.isManual = isManual
     }
 }
 

@@ -226,7 +226,12 @@ extension MainViewController {
                     continue
                 }
 
-                let reading = ShareGlucoseData(sgv: sgvValue, date: readingTimestamp, direction: data[data.count - 1 - i].direction)
+                let reading = ShareGlucoseData(
+                    sgv: sgvValue,
+                    date: readingTimestamp,
+                    direction: data[data.count - 1 - i].direction,
+                    isManual: data[data.count - 1 - i].isManual
+                )
                 bgData.append(reading)
             }
         }

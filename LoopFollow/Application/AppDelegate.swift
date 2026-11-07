@@ -338,6 +338,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             return
         }
 
+        // Trio's answers and "No Confirmation From Trio" stay in Notification Center too: with LoopFollow on screen
+        // the banner goes by in seconds while the remote screen still says to wait for a notification (7 November:
+        // two notices shown at 17:11 and 17:13, neither noticed, and nothing left to find afterwards)
+        if content.userInfo["command_status"] != nil
+            || notification.request.identifier.hasPrefix(TrioAnswerWatch.notificationPrefix)
+        {
+            completionHandler([.banner, .list, .sound, .badge])
+            return
+        }
+
         completionHandler([.banner, .sound, .badge])
     }
 }

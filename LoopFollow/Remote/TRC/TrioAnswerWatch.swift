@@ -84,7 +84,8 @@ final class TrioAnswerWatch {
         let time = DateFormatter.localizedString(from: command.sentAt, dateStyle: .none, timeStyle: .short)
         content.body = "Trio hasn't answered the \(command.summary) sent at \(time). It may or may not have been given: check Trio or Nightscout before sending it again."
         content.sound = .default
-        content.interruptionLevel = .timeSensitive
+        // not time-sensitive: LoopFollow has no Time Sensitive Notifications entitlement, and so marked the notice
+        // never showed (7 November, 17:11 and 17:13: presented as a banner, nothing on screen)
         let request = UNNotificationRequest(identifier: Self.notificationPrefix + "\(Int(command.sentAt.timeIntervalSince1970))", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }

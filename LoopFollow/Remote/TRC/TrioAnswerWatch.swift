@@ -10,6 +10,8 @@ import UserNotifications
 /// user to check first and never sends anything again on its own.
 final class TrioAnswerWatch {
     static let shared = TrioAnswerWatch()
+    /// The notice's identifier starts with this (`AppDelegate.willPresent` keeps it in Notification Center).
+    static let notificationPrefix = "trio-no-answer-"
 
     /// Trio's iPhone waits 25 s for its watch before answering "no answer", so a minute covers both ways.
     private let wait: TimeInterval = 60
@@ -82,8 +84,9 @@ final class TrioAnswerWatch {
         let time = DateFormatter.localizedString(from: command.sentAt, dateStyle: .none, timeStyle: .short)
         content.body = "Trio hasn't answered the \(command.summary) sent at \(time). It may or may not have been given: check Trio or Nightscout before sending it again."
         content.sound = .default
-        content.interruptionLevel = .timeSensitive
-        let request = UNNotificationRequest(identifier: "trio-no-answer-\(Int(command.sentAt.timeIntervalSince1970))", content: content, trigger: nil)
+        // not time-sensitive: LoopFollow has no Time Sensitive Notifications entitlement, and so marked the notice
+        // never showed (7 November, 17:11 and 17:13: presented as a banner, nothing on screen)
+        let request = UNNotificationRequest(identifier: Self.notificationPrefix + "\(Int(command.sentAt.timeIntervalSince1970))", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
 

@@ -12,7 +12,8 @@ enum InfoType: Int, CaseIterable, Codable {
         case .cob: return "COB"
         case .basal: return "Basal"
         case .override: return "Override"
-        case .battery: return "Battery"
+        // the looping phone's and the watch's, told apart by their symbol
+        case .battery: return "Battery 📱"
         case .pump: return "Pump"
         case .pumpBattery: return "Pump Battery"
         case .sage: return "SAGE"
@@ -31,7 +32,7 @@ enum InfoType: Int, CaseIterable, Codable {
         case .dbSize: return "DB Size"
         case .smoothedBG: return "Smoothed BG"
         case .untethered: return "Untethered"
-        case .watchBattery: return "Watch Battery"
+        case .watchBattery: return "Battery ⌚️"
         }
     }
 

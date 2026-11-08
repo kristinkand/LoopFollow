@@ -61,7 +61,7 @@ class PushNotificationManager {
             timestamp: Date().timeIntervalSince1970,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: completion)
+        sendEncryptedCommand(payload: payload, completion: RemoteCommandRefresh.following(.profile, completion))
     }
 
     func sendStopWeekendProfilePushNotification(completion: @escaping (Bool, String?) -> Void) {
@@ -71,7 +71,7 @@ class PushNotificationManager {
             timestamp: Date().timeIntervalSince1970,
             returnNotification: ReturnNotificationInfo.loopFollow()
         )
-        sendEncryptedCommand(payload: payload, completion: completion)
+        sendEncryptedCommand(payload: payload, completion: RemoteCommandRefresh.following(.profile, completion))
     }
 
     func sendBolusPushNotification(bolusAmount: HKQuantity, completion: @escaping (Bool, String?) -> Void) {

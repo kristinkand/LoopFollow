@@ -8,8 +8,8 @@ import HealthKit
 /// the result on its next regular Nightscout fetch, which can be minutes away.
 /// After a command is sent, treatments and device status are fetched a few extra
 /// times, stopping as soon as the change the command makes shows up, so the new
-/// override, temp target, bolus or carbs reach the phone, the watch and the Live
-/// Activity sooner.
+/// override, temp target, Profile, bolus or carbs reach the phone, the watch and the
+/// Live Activity sooner.
 final class RemoteCommandRefresh {
     /// What a command changes, and so what ends the follow-up fetches.
     enum Change {
@@ -19,11 +19,14 @@ final class RemoteCommandRefresh {
         /// A bolus sent with the meal (Trio) also has to show up; 0 g of carbs
         /// (fat and protein only) matches any new carb entry.
         case meal(grams: Double, bolus: Double)
+        /// Trio's Profile started or stopped.
+        case profile
 
         var name: String {
             switch self {
             case .override: "override"
             case .tempTarget: "temp target"
+            case .profile: "Profile"
             case .bolus: "bolus"
             case .meal: "meal"
             }
@@ -35,6 +38,14 @@ final class RemoteCommandRefresh {
     /// Seconds after the send. Most uploads land in the first half minute; the
     /// later fetches cover a pump that is slow to deliver or an upload that is retried.
     static let delays: [TimeInterval] = [10, 20, 30, 60, 90, 120]
+    /// A Profile change can take longer to reach Nightscout: while the Apple Watch has the pump, the watch starts or
+    /// stops it and Trio on the phone uploads it once it hears from the watch.
+    static let profileDelays: [TimeInterval] = RemoteCommandRefresh.delays + [180, 240, 300]
+
+    private static func steps(for change: Change) -> [TimeInterval] {
+        if case .profile = change { return profileDelays }
+        return delays
+    }
 
     private var pending: DispatchWorkItem?
 
@@ -53,29 +64,31 @@ final class RemoteCommandRefresh {
         DispatchQueue.main.async {
             self.cancel()
             LogManager.shared.log(category: .apns, message: "Fetching Nightscout early until the \(change.name) shows up")
-            self.schedule(step: 0, after: Self.delays[0], arrived: Self.arrivalCheck(for: change), change: change)
+            let delays = Self.steps(for: change)
+            self.schedule(step: 0, delays: delays, arrived: Self.arrivalCheck(for: change), change: change)
         }
     }
 
     /// Each fetch schedules the next one, so when the app was suspended past
     /// several of them (Bluetooth heartbeat modes), it fetches once on resuming
     /// instead of all the overdue ones at once.
-    private func schedule(step: Int, after delay: TimeInterval, arrived: @escaping () -> Bool, change: Change) {
+    private func schedule(step: Int, delays: [TimeInterval], arrived: @escaping () -> Bool, change: Change) {
+        let delay = step == 0 ? delays[0] : delays[step] - delays[step - 1]
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             if arrived() {
-                LogManager.shared.log(category: .apns, message: "The \(change.name) showed up; \(Self.delays.count - step) early fetches skipped")
+                LogManager.shared.log(category: .apns, message: "The \(change.name) showed up; \(delays.count - step) early fetches skipped")
                 self.pending = nil
                 return
             }
             TaskScheduler.shared.rescheduleTask(id: .treatments, to: Date())
             TaskScheduler.shared.rescheduleTask(id: .deviceStatus, to: Date())
             let next = step + 1
-            guard next < Self.delays.count else {
+            guard next < delays.count else {
                 self.pending = nil
                 return
             }
-            self.schedule(step: next, after: Self.delays[next] - Self.delays[step], arrived: arrived, change: change)
+            self.schedule(step: next, delays: delays, arrived: arrived, change: change)
         }
         pending = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
@@ -101,6 +114,9 @@ final class RemoteCommandRefresh {
             }
             let before = current()
             return { current() != before }
+        case .profile:
+            let before = Observable.shared.weekendProfileActive.value
+            return { Observable.shared.weekendProfileActive.value != before }
         case let .bolus(units):
             return newEntry(in: boluses, matching: units, tolerance: 0.01)
         case let .meal(grams, bolus):

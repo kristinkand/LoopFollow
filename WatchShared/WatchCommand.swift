@@ -18,6 +18,9 @@ struct WatchCommand: Codable, Equatable {
         case cancelOverride
         case startTempTarget(presetID: String)
         case cancelTempTarget
+        /// Trio's Profile (Adjustments › Profile): started until stopped, or stopped.
+        case startProfile
+        case stopProfile
         case snoozeAlarm
         /// Snoozes all alarms until the date, as the phone's "Snooze all" does; nil ends the snooze.
         case snoozeAll(until: Date?)
@@ -44,6 +47,8 @@ extension WatchCommand.Action {
         case .cancelOverride: "cancelOverride"
         case .startTempTarget: "startTempTarget"
         case .cancelTempTarget: "cancelTempTarget"
+        case .startProfile: "startProfile"
+        case .stopProfile: "stopProfile"
         case .snoozeAlarm: "snoozeAlarm"
         case .snoozeAll: "snoozeAll"
         }

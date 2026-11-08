@@ -167,7 +167,8 @@ enum WatchStateBuilder {
                 carbStep: 1,
                 maxCarbs: maxCarbs,
                 includeFatProtein: mealWithFatProtein
-            ).map { WatchMealPick(carbs: $0.carbs, fat: $0.fat, protein: $0.protein, bolus: $0.bolus) }
+            ).map { WatchMealPick(carbs: $0.carbs, fat: $0.fat, protein: $0.protein, bolus: $0.bolus) },
+            profileActive: kind == .trio ? Observable.shared.weekendProfileActive.value : nil
         )
     }
 

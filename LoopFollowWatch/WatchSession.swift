@@ -185,6 +185,10 @@ final class WatchSession: NSObject, ObservableObject {
             }
         case .cancelTempTarget:
             return { $0.snapshot.map { $0.tempTargetMgdl == nil } ?? false }
+        case .startProfile:
+            return { $0.remote?.profileActive == true }
+        case .stopProfile:
+            return { $0.remote?.profileActive == false }
         case let .bolus(units):
             return { $0.boluses.contains { $0.t >= sent - 60 && abs($0.v - units) < 0.01 } }
         case let .meal(carbs, _, _, _, consumedAt):

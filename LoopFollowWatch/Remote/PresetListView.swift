@@ -4,7 +4,8 @@
 import SwiftUI
 
 /// Override or temp target presets synced from the phone, with a cancel row
-/// while one is active.
+/// while one is active. With Trio, the override list also starts and stops its
+/// Profile, as Trio shows it next to the overrides.
 struct PresetListView: View {
     enum Kind {
         case override
@@ -14,6 +15,8 @@ struct PresetListView: View {
     let kind: Kind
     let state: WatchState
     let presets: [WatchPreset]
+    /// Trio's Profile: whether it runs; nil hides the row (Loop, or a phone that doesn't send it).
+    var profileActive: Bool? = nil
 
     @EnvironmentObject private var navigator: WatchNavigator
 
@@ -43,6 +46,25 @@ struct PresetListView: View {
                     } label: {
                         Label(activeText, systemImage: "xmark.circle")
                             .foregroundStyle(.red)
+                    }
+                }
+            }
+
+            if kind == .override, let profileActive {
+                Section("Profile") {
+                    Button {
+                        navigator.push(.confirm(CommandRequest(
+                            title: profileActive ? "Stop Profile" : "Start Profile",
+                            lines: [profileActive ? "Stop Trio's Profile?" : "Start Trio's Profile until it is stopped?"],
+                            action: profileActive ? .stopProfile : .startProfile,
+                            deliversInsulin: false
+                        )))
+                    } label: {
+                        Label(
+                            profileActive ? "Stop Profile" : "Start Profile",
+                            systemImage: profileActive ? "xmark.circle" : "calendar"
+                        )
+                        .foregroundStyle(profileActive ? .red : .mint)
                     }
                 }
             }

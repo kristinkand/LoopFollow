@@ -74,6 +74,9 @@ enum WatchCommandValidator {
         case (.loop, .startTempTarget), (.loop, .cancelTempTarget):
             return .failure(ValidationError("Temp targets are not available for Loop."))
 
+        case (.loop, .startProfile), (.loop, .stopProfile):
+            return .failure(ValidationError("Profile is not available for Loop."))
+
         default:
             return .success(action)
         }

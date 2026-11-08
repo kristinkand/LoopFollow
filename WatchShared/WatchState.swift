@@ -184,6 +184,8 @@ struct WatchRemoteConfig: Codable, Equatable {
     /// The phone's Quick-Pick suggestions for this time of day.
     let quickPickBoluses: [Double]
     let quickPickMeals: [WatchMealPick]
+    /// Trio only: whether its Profile runs, from Nightscout; nil for Loop or from a phone that doesn't send it.
+    var profileActive: Bool? = nil
 }
 
 struct WatchMealPick: Codable, Equatable {

@@ -154,7 +154,7 @@ final class WatchCommandHandler {
         case .cancelOverride:
             service.sendCancelOverrideNotification(completion: sent)
 
-        case .startTempTarget, .cancelTempTarget, .snoozeAlarm, .snoozeAll:
+        case .startTempTarget, .cancelTempTarget, .startProfile, .stopProfile, .snoozeAlarm, .snoozeAll:
             finish(false, "This command is not available for Loop.")
         }
     }
@@ -229,6 +229,12 @@ final class WatchCommandHandler {
 
         case .cancelTempTarget:
             manager.sendCancelTempTargetPushNotification(completion: sent)
+
+        case .startProfile:
+            manager.sendStartWeekendProfilePushNotification(completion: sent)
+
+        case .stopProfile:
+            manager.sendStopWeekendProfilePushNotification(completion: sent)
 
         case .snoozeAlarm, .snoozeAll:
             finish(false, "Unknown request.")

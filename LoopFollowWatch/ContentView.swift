@@ -82,7 +82,12 @@ struct ContentView: View {
             case .bolusPresets:
                 BolusPresetsView(remote: remote)
             case .overrides:
-                PresetListView(kind: .override, state: state, presets: remote.overridePresets)
+                PresetListView(
+                    kind: .override,
+                    state: state,
+                    presets: remote.overridePresets,
+                    profileActive: remote.kind == .trio ? remote.profileActive : nil
+                )
             case .tempTargets:
                 PresetListView(kind: .tempTarget, state: state, presets: remote.tempTargetPresets)
             case let .confirm(request):

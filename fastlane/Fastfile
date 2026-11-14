@@ -47,6 +47,7 @@ NOTIFICATION_SERVICE_IDENTIFIER = "#{APP_IDENTIFIER}.LoopFollowNotificationServi
 WATCH_IDENTIFIER = "#{APP_IDENTIFIER}.watchkitapp"
 WATCH_WIDGETS_IDENTIFIER = "#{WATCH_IDENTIFIER}.widgets"
 WATCH_SETUP_DOCS = "https://loopfollowdocs.org/build/lf-browser-build/#update-for-the-apple-watch-app"
+NOTIFICATION_SERVICE_SETUP_DOCS = "https://loopfollowdocs.org/build/lf-browser-build/#update-for-lf-hub"
 
 # The notification service extension, which rings LF Hub alarms, needs its own
 # identifier with the LoopFollow App Group, which existing browser builders add once
@@ -55,7 +56,7 @@ def notification_service_setup_error!
   UI.user_error!(
     "The LoopFollow Notification Service identifier is not set up yet. Run the Add Identifiers action, " \
     "add the LoopFollow App Group to the LoopFollow Notification Service identifier, " \
-    "run the Create Certificates action, then build again."
+    "run the Create Certificates action, then build again. Instructions: #{NOTIFICATION_SERVICE_SETUP_DOCS}"
   )
 end
 
@@ -89,11 +90,16 @@ def explain_signing_failure(error, log_dir = nil)
       text += File.read(log) rescue nil
     end
   end
-  notification_service_setup_error! if [NOTIFICATION_SERVICE_IDENTIFIER, "LoopFollowNotificationService"].any? { |id| text.include?(id) }
+  app_group_error = /App Groups capability|com\.apple\.security\.application-groups/i
 
-  mentions_watch = [WATCH_IDENTIFIER, WATCH_WIDGETS_IDENTIFIER, "LoopFollowWatch"].any? { |id| text.include?(id) }
-  missing_app_group = text.match?(/App Groups capability|com\.apple\.security\.application-groups/i)
-  watch_setup_error! if mentions_watch && missing_app_group
+  # Every build log names all targets, so a build failure counts only through its App
+  # Group error lines, which name the target; a match failure names only the
+  # identifiers it could not sign.
+  scope = log_dir ? text.lines.grep(app_group_error).join : text
+  notification_service_setup_error! if [NOTIFICATION_SERVICE_IDENTIFIER, "LoopFollowNotificationService"].any? { |id| scope.include?(id) }
+
+  mentions_watch = [WATCH_IDENTIFIER, WATCH_WIDGETS_IDENTIFIER, "LoopFollowWatch"].any? { |id| scope.include?(id) }
+  watch_setup_error! if mentions_watch && scope.match?(app_group_error)
 end
 
 platform :ios do

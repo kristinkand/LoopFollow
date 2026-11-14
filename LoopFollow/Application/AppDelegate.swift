@@ -161,11 +161,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         LogManager.shared.log(category: .apns, message: "Received remote notification: keys=\(userInfoKeys)")
         RemoteCommandTracker.shared.handleNotification(userInfo: userInfo)
 
-        if let sent = (userInfo["lfhubHeartbeat"] as? NSNumber)?.doubleValue {
-            let delay = Int(Date().timeIntervalSince1970 - sent)
-            LogManager.shared.log(category: .hub, message: "Hub heartbeat arrived \(delay) s after it was sent (app state \(UIApplication.shared.applicationState.rawValue))")
-        }
-
         // Check if this is a response notification from Loop or Trio
         if let aps = userInfo["aps"] as? [String: Any] {
             // Handle visible notification (alert, sound, badge)
@@ -222,7 +217,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Observable.shared.selectedTabIndex.value = 0
         }
 
-        if let hubAlarm = response.notification.request.content.userInfo["lfhubAlarmId"] as? String,
+        if HubClient.shared.drivesAlarms || response.actionIdentifier == "snooze",
+           let hubAlarm = response.notification.request.content.userInfo["lfhubAlarmId"] as? String,
            let alarmID = UUID(uuidString: hubAlarm)
         {
             HubClient.shared.adoptHubAlarm(alarmID)
@@ -318,6 +314,14 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             Task { await HubClient.shared.refreshStatus() }
         }
 
+        // A hub alarm ringing as a system alarm arrives passive; it still becomes the
+        // current alarm while the hub drives the alarms, so the in-app snooze acts on it.
+        if HubClient.shared.drivesAlarms,
+           let hubAlarm = content.userInfo["lfhubAlarmId"] as? String, let alarmID = UUID(uuidString: hubAlarm)
+        {
+            HubClient.shared.adoptHubAlarm(alarmID)
+        }
+
         // Suppress notifications iOS routes here that we never intended to surface:
         // the Live Activity push-to-start uses interruption-level: passive with empty
         // title/body and must not produce a banner or sound when LF is foregrounded.
@@ -326,10 +330,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         if content.interruptionLevel == .passive || (content.title.isEmpty && content.body.isEmpty) {
             completionHandler(content.badge != nil ? [.badge] : [])
             return
-        }
-
-        if let hubAlarm = content.userInfo["lfhubAlarmId"] as? String, let alarmID = UUID(uuidString: hubAlarm) {
-            HubClient.shared.adoptHubAlarm(alarmID)
         }
 
         // The hub's Speak BG: the app on screen shows the reading, so only the speech plays.

@@ -49,6 +49,9 @@ struct WatchState: Codable, Equatable {
     /// G7 readings the sensor marked unreliable (Trio's "Unreliable Glucose" treatments), mg/dL, oldest first:
     /// hollow orange dots, never used as BG; nil from a phone that doesn't send them.
     var unreliable: [WatchReading]? = nil
+    /// Trio's untethered sessions in the last 24 hours (its "Untethered Watch" treatments), oldest first: while one
+    /// runs, Trio's Apple Watch app has the pump and loops. Nil from a phone that doesn't send them.
+    var untethered: [WatchUntethered]? = nil
 
     func encoded() -> Data? {
         try? JSONEncoder().encode(self)
@@ -88,7 +91,41 @@ struct WatchOverride: Codable, Equatable {
     var endDate: Date { Date(timeIntervalSince1970: end) }
 }
 
+/// One untethered session of Trio's Apple Watch app, as the phone's chart draws it (a teal band along the bottom).
+struct WatchUntethered: Codable, Equatable {
+    /// Unix epoch seconds.
+    let start: TimeInterval
+    /// Nil while it runs: Trio uploads the end only when the phone has the pump again.
+    let end: TimeInterval?
+
+    var startDate: Date { Date(timeIntervalSince1970: start) }
+    func endDate(now: Date) -> Date { end.map { Date(timeIntervalSince1970: $0) } ?? now }
+
+    /// A start without an end older than this is a session whose end never reached Nightscout, not a running one.
+    static let ongoingLimit: TimeInterval = 24 * 3600
+
+    /// The sessions in Trio's treatments (start, and duration in minutes once ended), as the phone reads them
+    /// (Untethered.swift): a start whose end was lost ends where the next one begins.
+    static func sessions(_ entries: [(start: TimeInterval, minutes: Double?)], now: Date) -> [WatchUntethered] {
+        let nowSeconds = now.timeIntervalSince1970
+        var spans = entries.compactMap { entry -> (start: TimeInterval, end: TimeInterval?)? in
+            if let minutes = entry.minutes, minutes > 0 { return (entry.start, entry.start + minutes * 60) }
+            return nowSeconds - entry.start < ongoingLimit ? (entry.start, nil) : nil
+        }
+        spans.sort { $0.start < $1.start }
+        for index in spans.indices.dropLast() where spans[index].end == nil {
+            spans[index].end = spans[index + 1].start
+        }
+        return spans.map { WatchUntethered(start: $0.start, end: $0.end) }
+    }
+}
+
 extension WatchState {
+    /// The untethered session running now, if any.
+    var runningUntethered: WatchUntethered? {
+        untethered?.last.flatMap { $0.end == nil ? $0 : nil }
+    }
+
     /// The override running at `date`, if any.
     func activeOverride(at date: Date) -> WatchOverride? {
         overrides?.last { $0.startDate <= date && date < $0.endDate }

@@ -6,7 +6,7 @@ import SwiftUI
 
 /// BG chart in the phone's colors: readings colored by range, dashed low/high
 /// lines, prediction lines or cone in their phone colors, boluses and carbs as markers,
-/// and overrides as a green band along the top.
+/// overrides as a green band along the top, and Trio's untethered sessions as a teal band along the bottom.
 struct WatchChartView: View {
     let state: WatchState
     let now: Date
@@ -27,6 +27,7 @@ struct WatchChartView: View {
         }
         let cone = state.cone.filter { window.contains($0.date) }
         let overrides = (state.overrides ?? []).filter { $0.endDate > window.lowerBound && $0.startDate < window.upperBound }
+        let untethered = (state.untethered ?? []).filter { $0.endDate(now: now) > window.lowerBound && $0.startDate < window.upperBound }
         let top = yTop(readings: readings + unreliable, predictions: predictions.flatMap(\.1) + cone.map { WatchReading(t: $0.t, v: $0.high) })
 
         Chart {
@@ -58,6 +59,17 @@ struct WatchChartView: View {
                     height: .fixed(4)
                 )
                 .foregroundStyle(Color.green.opacity(0.8))
+            }
+
+            // Trio's untethered sessions: a thin band along the bottom edge, as on the phone's chart
+            ForEach(untethered, id: \.start) { session in
+                RectangleMark(
+                    xStart: .value("Start", max(session.startDate, window.lowerBound)),
+                    xEnd: .value("End", min(session.endDate(now: now), window.upperBound)),
+                    y: .value("Untethered", 39),
+                    height: .fixed(4)
+                )
+                .foregroundStyle(Color.teal.opacity(0.8))
             }
 
             if let marker = markerDate {

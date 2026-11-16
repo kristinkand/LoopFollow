@@ -20,6 +20,7 @@ struct GlucosePage: View {
                 }
                 glucose(now: context.date)
                 unreliableLine(now: context.date)
+                untetheredLine
                 if !isLuminanceReduced {
                     details
                     overrideLine(now: context.date)
@@ -141,6 +142,20 @@ struct GlucosePage: View {
 
     /// The running override's name and insulin needs.
     @ViewBuilder
+    /// While Trio's Apple Watch app has the pump and loops: from when, in the teal of the chart band. Shown in the
+    /// always-on view too, as it says where the loop runs.
+    @ViewBuilder
+    private var untetheredLine: some View {
+        if let session = state.runningUntethered {
+            Text("\(Image(systemName: "applewatch")) Untethered since \(session.startDate.formatted(date: .omitted, time: .shortened))")
+                .font(.footnote)
+                .foregroundStyle(.teal)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .accessibilityLabel("Untethered: Trio's Apple Watch app has the pump since \(session.startDate.formatted(date: .omitted, time: .shortened))")
+        }
+    }
+
     private func overrideLine(now: Date) -> some View {
         let active = state.activeOverride(at: now)
         // The phone's periods end on time; the watch's own fetch only has the snapshot's name.

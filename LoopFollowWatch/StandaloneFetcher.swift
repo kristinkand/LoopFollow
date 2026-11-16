@@ -154,8 +154,23 @@ enum StandaloneFetcher {
             snoozeAllUntil: base?.snoozeAllUntil,
             remote: remote,
             appIcon: base?.appIcon,
-            unreliable: unreliableReadings(treatments, cutoff: cutoff)
+            unreliable: unreliableReadings(treatments, cutoff: cutoff),
+            // Dexcom has no treatments: the sessions as last heard from the phone
+            untethered: status == nil && treatments.isEmpty ? base?.untethered : untetheredSessions(treatments, cutoff: cutoff, now: now)
         )
+    }
+
+    /// Trio's "Untethered Watch" treatments: a start without a duration while the watch has the pump, the same one
+    /// with its duration once the phone has it again.
+    private static func untetheredSessions(_ treatments: [[String: Any]], cutoff: TimeInterval, now: Date) -> [WatchUntethered] {
+        let entries = treatments.compactMap { entry -> (start: TimeInterval, minutes: Double?)? in
+            guard entry["eventType"] as? String == "Untethered Watch",
+                  let at = DeviceStatusSummary.date(entry["timestamp"] ?? entry["created_at"])
+            else { return nil }
+            let minutes = (entry["duration"] as? NSNumber)?.doubleValue ?? Double(entry["duration"] as? String ?? "")
+            return (at.timeIntervalSince1970, minutes)
+        }
+        return WatchUntethered.sessions(entries, now: now).filter { ($0.end ?? now.timeIntervalSince1970) >= cutoff }
     }
 
     /// Trio's "Unreliable Glucose" treatments, as the phone reads them (Untethered.swift), in mg/dL.

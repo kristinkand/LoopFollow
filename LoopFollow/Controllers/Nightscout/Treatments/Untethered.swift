@@ -3,7 +3,7 @@
 
 import Foundation
 
-/// Trio's untethered watch mode: while its Apple Watch app has the pump, Trio uploads an "Untethered Watch" treatment
+/// Trio's watch mode (called untethered mode in its code and in the Nightscout event type): while its Apple Watch app has the pump, Trio uploads an "Untethered Watch" treatment
 /// at the start, without a duration, and the same one with its duration at the end (Nightscout keeps one treatment
 /// per time and type, so the end replaces the start). Shown as a band in the chart and as a row in the info table.
 extension MainViewController {

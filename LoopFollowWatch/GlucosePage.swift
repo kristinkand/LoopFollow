@@ -147,12 +147,12 @@ struct GlucosePage: View {
     @ViewBuilder
     private var untetheredLine: some View {
         if let session = state.runningUntethered {
-            Text("\(Image(systemName: "applewatch")) Untethered since \(session.startDate.formatted(date: .omitted, time: .shortened))")
+            Text("\(Image(systemName: "applewatch")) Watch mode since \(session.startDate.formatted(date: .omitted, time: .shortened))")
                 .font(.footnote)
                 .foregroundStyle(.teal)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .accessibilityLabel("Untethered: Trio's Apple Watch app has the pump since \(session.startDate.formatted(date: .omitted, time: .shortened))")
+                .accessibilityLabel("Watch mode: Trio's Apple Watch app has the pump since \(session.startDate.formatted(date: .omitted, time: .shortened))")
         }
     }
 

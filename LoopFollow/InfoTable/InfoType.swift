@@ -31,7 +31,7 @@ enum InfoType: Int, CaseIterable, Codable {
         case .iage: return "IAGE"
         case .dbSize: return "DB Size"
         case .smoothedBG: return "Smoothed BG"
-        case .untethered: return "Untethered"
+        case .untethered: return "Watch Mode"
         case .watchBattery: return "Battery ⌚️"
         }
     }

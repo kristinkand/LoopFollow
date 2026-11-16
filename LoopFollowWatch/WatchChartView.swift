@@ -66,7 +66,7 @@ struct WatchChartView: View {
                 RectangleMark(
                     xStart: .value("Start", max(session.startDate, window.lowerBound)),
                     xEnd: .value("End", min(session.endDate(now: now), window.upperBound)),
-                    y: .value("Untethered", 39),
+                    y: .value("Watch Mode", 39),
                     height: .fixed(4)
                 )
                 .foregroundStyle(Color.teal.opacity(0.8))

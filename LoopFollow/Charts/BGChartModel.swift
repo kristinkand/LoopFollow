@@ -637,8 +637,8 @@ final class BGChartModel: ObservableObject {
                 end: end,
                 yBottom: yBottom - 14,
                 yTop: yBottom - 4,
-                label: "Untethered",
-                pillText: "Untethered on Apple Watch\n\(state) \(pillTimeString(for: start))",
+                label: "Watch Mode",
+                pillText: "Watch mode on Apple Watch\n\(state) \(pillTimeString(for: start))",
                 color: .teal
             )
         }

@@ -140,8 +140,6 @@ struct GlucosePage: View {
         }
     }
 
-    /// The running override's name and insulin needs.
-    @ViewBuilder
     /// While Trio's Apple Watch app has the pump and loops: from when, in the teal of the chart band. Shown in the
     /// always-on view too, as it says where the loop runs.
     @ViewBuilder
@@ -156,6 +154,8 @@ struct GlucosePage: View {
         }
     }
 
+    /// The running override's name and insulin needs.
+    @ViewBuilder
     private func overrideLine(now: Date) -> some View {
         let active = state.activeOverride(at: now)
         // The phone's periods end on time; the watch's own fetch only has the snapshot's name.

@@ -192,7 +192,6 @@ private struct LockScreenLiveActivityView: View {
 
     var body: some View {
         let s = state.snapshot
-        let slotConfig = LAAppGroupSettings.slots()
 
         VStack(spacing: 6) {
             HStack(spacing: 12) {
@@ -222,22 +221,9 @@ private struct LockScreenLiveActivityView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Rectangle()
-                    .fill(Color.white.opacity(0.20))
-                    .frame(width: 1)
-                    .padding(.vertical, 8)
-
-                VStack(spacing: 8) {
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[0], snapshot: s)
-                        SlotView(option: slotConfig[1], snapshot: s)
-                    }
-                    HStack(spacing: 12) {
-                        SlotView(option: slotConfig[2], snapshot: s)
-                        SlotView(option: slotConfig[3], snapshot: s)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                LAHistoryGraphView(history: s.history)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 72)
             }
 
             ActiveAdjustmentsView(snapshot: s)
@@ -823,6 +809,49 @@ private enum LAFormat {
 
     static func updated(_ s: GlucoseSnapshot) -> String {
         hhmmFormatter.string(from: s.updatedAt)
+    }
+}
+
+// MARK: - Lock screen history graph
+
+/// Mini version of the main screen's BG graph for the Lock Screen widget.
+/// Colors each short line segment with the same dynamic gradient as the main
+/// chart and the glucose number, using each segment's midpoint value.
+private struct LAHistoryGraphView: View {
+    let history: [LAHistoryPoint]
+
+    var body: some View {
+        if history.count < 2 {
+            Color.clear
+        } else {
+            let t = LAAppGroupSettings.thresholdsMgdl()
+            let minDate = history.first!.d
+            let maxDate = history.last!.d
+            let dateRange = max(maxDate - minDate, 1)
+            let minValue = Double(history.map(\.v).min() ?? 0)
+            let maxValue = Double(history.map(\.v).max() ?? 1)
+            let valueRange = max(maxValue - minValue, 1)
+
+            Canvas { context, size in
+                for (a, b) in zip(history, history.dropFirst()) {
+                    let midValue = (Double(a.v) + Double(b.v)) / 2
+                    let x1 = size.width * CGFloat((a.d - minDate) / dateRange)
+                    let y1 = size.height * (1 - CGFloat((Double(a.v) - minValue) / valueRange))
+                    let x2 = size.width * CGFloat((b.d - minDate) / dateRange)
+                    let y2 = size.height * (1 - CGFloat((Double(b.v) - minValue) / valueRange))
+
+                    var segment = Path()
+                    segment.move(to: CGPoint(x: x1, y: y1))
+                    segment.addLine(to: CGPoint(x: x2, y: y2))
+
+                    context.stroke(
+                        segment,
+                        with: .color(dynamicGlucoseColor(glucoseValue: midValue, low: t.low, target: t.target, high: t.high)),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+                    )
+                }
+            }
+        }
     }
 }
 

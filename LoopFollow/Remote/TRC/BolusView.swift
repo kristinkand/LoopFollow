@@ -5,6 +5,26 @@ import HealthKit
 import LocalAuthentication
 import SwiftUI
 
+/// The newest IOB from Nightscout and when the loop reported it, to decide a meal or bolus on.
+struct CurrentIOBSection: View {
+    @ObservedObject private var iob = Observable.shared.iobText
+    @ObservedObject private var loopTime = Storage.shared.lastLoopTime
+
+    var body: some View {
+        Section {
+            HStack {
+                Text("IOB")
+                Spacer()
+                Text("\(iob.value) U")
+                if loopTime.value > 0 {
+                    Text(Date(timeIntervalSince1970: loopTime.value), style: .time)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
 struct BolusView: View {
     @Environment(\.presentationMode) private var presentationMode
 
@@ -64,6 +84,7 @@ struct BolusView: View {
         NavigationView {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Form {
+                    CurrentIOBSection()
                     recommendedBlocks(now: context.date)
 
                     if !quickPickBoluses.quickPickBoluses.isEmpty {

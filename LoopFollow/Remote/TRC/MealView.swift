@@ -47,6 +47,8 @@ struct MealView: View {
         NavigationView {
             VStack {
                 Form {
+                    CurrentIOBSection()
+
                     if !quickPickMeals.quickPickMeals.isEmpty {
                         Section(header: QuickPickSectionHeader(title: "Quick-Pick Meals", infoText: QuickPickSectionHeader.mealInfoText)) {
                             ScrollView(.horizontal, showsIndicators: false) {

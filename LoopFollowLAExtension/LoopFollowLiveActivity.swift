@@ -219,7 +219,8 @@ private struct LockScreenLiveActivityView: View {
                         .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // as wide as the number needs: the graph takes the rest
+                .fixedSize(horizontal: true, vertical: false)
 
                 LAHistoryGraphView(history: s.history)
                     .frame(maxWidth: .infinity)

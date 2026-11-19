@@ -6,10 +6,10 @@ import HealthKit
 
 /// Loop and Trio apply a remote command within seconds, but LoopFollow only sees
 /// the result on its next regular Nightscout fetch, which can be minutes away.
-/// After a command is sent, treatments and device status are fetched a few extra
-/// times, stopping as soon as the change the command makes shows up, so the new
-/// override, temp target, Profile, bolus or carbs reach the phone, the watch and the
-/// Live Activity sooner.
+/// After a command is sent, treatments and device status (the profile document for
+/// a profile command) are fetched a few extra times, stopping as soon as the change
+/// the command makes shows up, so the new override, temp target, weekend Profile, bolus,
+/// carbs or profile reach the phone, the watch and the Live Activity sooner.
 final class RemoteCommandRefresh {
     /// What a command changes, and so what ends the follow-up fetches.
     enum Change {
@@ -19,16 +19,25 @@ final class RemoteCommandRefresh {
         /// A bolus sent with the meal (Trio) also has to show up; 0 g of carbs
         /// (fat and protein only) matches any new carb entry.
         case meal(grams: Double, bolus: Double)
-        /// Trio's Profile started or stopped.
-        case profile
+        /// Trio's weekend Profile started or stopped.
+        case weekendProfile
+        case profile(ProfileCommand)
 
         var name: String {
             switch self {
             case .override: "override"
             case .tempTarget: "temp target"
-            case .profile: "Profile"
+            case .weekendProfile: "Profile"
             case .bolus: "bolus"
             case .meal: "meal"
+            case .profile: "profile change"
+            }
+        }
+
+        var tasks: [TaskID] {
+            switch self {
+            case .profile: [.profile]
+            default: [.treatments, .deviceStatus]
             }
         }
     }
@@ -43,11 +52,12 @@ final class RemoteCommandRefresh {
     static let profileDelays: [TimeInterval] = RemoteCommandRefresh.delays + [180, 240, 300]
 
     private static func steps(for change: Change) -> [TimeInterval] {
-        if case .profile = change { return profileDelays }
+        if case .weekendProfile = change { return profileDelays }
         return delays
     }
 
     private var pending: DispatchWorkItem?
+    private var pendingIsProfile = false
 
     private init() {}
 
@@ -69,6 +79,15 @@ final class RemoteCommandRefresh {
         }
     }
 
+    /// A profile command's reply: the phone uploads its profiles before replying, so the profile
+    /// document is fetched now, and a refused command ends the follow-up fetches.
+    func profileCommandAnswered(success: Bool) {
+        DispatchQueue.main.async {
+            if !success, self.pendingIsProfile { self.cancel() }
+            TaskScheduler.shared.rescheduleTask(id: .profile, to: Date())
+        }
+    }
+
     /// Each fetch schedules the next one, so when the app was suspended past
     /// several of them (Bluetooth heartbeat modes), it fetches once on resuming
     /// instead of all the overdue ones at once.
@@ -78,25 +97,31 @@ final class RemoteCommandRefresh {
             guard let self else { return }
             if arrived() {
                 LogManager.shared.log(category: .apns, message: "The \(change.name) showed up; \(delays.count - step) early fetches skipped")
-                self.pending = nil
+                self.cancel()
+                if case let .profile(command) = change {
+                    RemoteCommandTracker.shared.resolveProfileCommandSeen(command)
+                }
                 return
             }
-            TaskScheduler.shared.rescheduleTask(id: .treatments, to: Date())
-            TaskScheduler.shared.rescheduleTask(id: .deviceStatus, to: Date())
+            for task in change.tasks {
+                TaskScheduler.shared.rescheduleTask(id: task, to: Date())
+            }
             let next = step + 1
             guard next < delays.count else {
-                self.pending = nil
+                self.cancel()
                 return
             }
             self.schedule(step: next, delays: delays, arrived: arrived, change: change)
         }
         pending = work
+        if case .profile = change { pendingIsProfile = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func cancel() {
         pending?.cancel()
         pending = nil
+        pendingIsProfile = false
     }
 
     /// Captures the phone's data now and returns a check that is true once the
@@ -114,7 +139,7 @@ final class RemoteCommandRefresh {
             }
             let before = current()
             return { current() != before }
-        case .profile:
+        case .weekendProfile:
             let before = Observable.shared.weekendProfileActive.value
             return { Observable.shared.weekendProfileActive.value != before }
         case let .bolus(units):
@@ -124,6 +149,27 @@ final class RemoteCommandRefresh {
             guard bolus > 0 else { return carbsArrived }
             let bolusArrived = newEntry(in: boluses, matching: bolus, tolerance: 0.01)
             return { carbsArrived() && bolusArrived() }
+        case let .profile(command):
+            let before = Observable.shared.therapyProfiles.value
+            return { profileArrived(command, before: before, now: Observable.shared.therapyProfiles.value) }
+        }
+    }
+
+    /// True once `now` shows the command's result: the profile is active, deleted, or saved with
+    /// values other than those in `before` (a new or renamed profile has none there), or the scheduled switches
+    /// are no longer the list the command replaced.
+    static func profileArrived(_ command: ProfileCommand, before: TherapyProfileSet?, now: TherapyProfileSet?) -> Bool {
+        guard let now else { return false }
+        switch command {
+        case let .activate(profile):
+            return now.activeName.caseInsensitiveCompare(profile.name) == .orderedSame
+        case let .delete(profile):
+            return now.profile(named: profile.name) == nil
+        case let .save(name, _, _):
+            guard let saved = now.profile(named: name) else { return false }
+            return saved.fingerprint != before?.profile(named: name)?.fingerprint
+        case let .saveScheduledSwitches(_, baseFingerprint):
+            return now.scheduledSwitches.fingerprint != baseFingerprint
         }
     }
 

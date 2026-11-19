@@ -8,6 +8,7 @@ struct TrioRemoteControlView: View {
     @ObservedObject private var activeOverrideNote = Observable.shared.override
     @ObservedObject private var activeTempTarget = Observable.shared.tempTarget
     @ObservedObject private var weekendProfileActive = Observable.shared.weekendProfileActive
+    @ObservedObject private var remoteCommands = Storage.shared.remoteCommands
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
@@ -23,7 +24,10 @@ struct TrioRemoteControlView: View {
                     CommandButtonView(command: "Bolus", iconName: "syringe", destination: BolusView())
                     CommandButtonView(command: "Temp Target", iconName: "scope", destination: TempTargetView(), isActive: activeTempTarget.value != nil)
                     CommandButtonView(command: "Overrides", iconName: "slider.horizontal.3", destination: OverrideView(), isActive: activeOverrideNote.value != nil)
-                    CommandButtonView(command: "Profile", iconName: "calendar", destination: WeekendProfileView(), isActive: weekendProfileActive.value)
+                    CommandButtonView(command: "Weekend Profile", iconName: "calendar", destination: WeekendProfileView(), isActive: weekendProfileActive.value)
+                    if ProfileRemote.trio.supportsAny(in: remoteCommands.value) {
+                        CommandButtonView(command: "Profiles", iconName: "arrow.triangle.2.circlepath", destination: TherapyProfilesView(remote: .trio))
+                    }
                 }
                 .padding(.horizontal)
 

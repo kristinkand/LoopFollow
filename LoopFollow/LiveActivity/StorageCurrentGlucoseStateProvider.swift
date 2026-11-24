@@ -163,4 +163,11 @@ struct StorageCurrentGlucoseStateProvider: CurrentGlucoseStateProviding {
     var history: [LAHistoryPoint] {
         Storage.shared.lastBgHistory.value
     }
+
+    // MARK: - Watch mode
+
+    var watchModeSince: TimeInterval? {
+        let since = Storage.shared.watchModeSince.value
+        return since > 0 ? since : nil
+    }
 }

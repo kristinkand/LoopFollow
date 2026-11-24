@@ -218,6 +218,17 @@ private struct LockScreenLiveActivityView: View {
                         .monospacedDigit()
                         .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
+
+                    // Trio's Apple Watch app has the pump: the same teal as the chart's watch mode band
+                    if s.watchModeSince != nil {
+                        Label("Watch mode", systemImage: "applewatch")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.teal.opacity(0.9)))
+                    }
                 }
                 // as wide as the number needs: the graph takes the rest
                 .fixedSize(horizontal: true, vertical: false)

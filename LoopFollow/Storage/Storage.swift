@@ -168,6 +168,8 @@ class Storage {
     var highLine = StorageValue<Double>(key: "highLine", defaultValue: 180.0)
     var targetLine = StorageValue<Double>(key: "targetLine", defaultValue: 100.0)
     var lastBgHistory = StorageValue<[LAHistoryPoint]>(key: "lastBgHistory", defaultValue: [])
+    /// Since when Trio's watch mode runs (its running "Untethered Watch" treatment), Unix seconds; 0 when it doesn't.
+    var watchModeSince = StorageValue<TimeInterval>(key: "watchModeSince", defaultValue: 0)
     var downloadDays = StorageValue<Int>(key: "downloadDays", defaultValue: 1)
     var graphTimeZoneEnabled = StorageValue<Bool>(key: "graphTimeZoneEnabled", defaultValue: false)
     var graphTimeZoneIdentifier = StorageValue<String>(key: "graphTimeZoneIdentifier", defaultValue: TimeZone.current.identifier)

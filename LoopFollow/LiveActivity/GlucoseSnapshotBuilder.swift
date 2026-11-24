@@ -113,6 +113,15 @@ protocol CurrentGlucoseStateProviding {
 
     /// Recent glucose history for the Lock Screen mini graph (last ~6 hours).
     var history: [LAHistoryPoint] { get }
+
+    // MARK: - Watch mode
+
+    /// Since when Trio's Apple Watch app has had the pump, Unix epoch seconds; nil when it hasn't.
+    var watchModeSince: TimeInterval? { get }
+}
+
+extension CurrentGlucoseStateProviding {
+    var watchModeSince: TimeInterval? { nil }
 }
 
 // MARK: - Builder
@@ -184,6 +193,7 @@ enum GlucoseSnapshotBuilder {
             isNotLooping: provider.isNotLooping,
             cgmSensorState: provider.cgmSensorState,
             showRenewalOverlay: provider.showRenewalOverlay,
+            watchModeSince: provider.watchModeSince,
         )
     }
 }

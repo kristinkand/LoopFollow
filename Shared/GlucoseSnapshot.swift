@@ -141,6 +141,12 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
     /// The extension renders a "Tap to update" overlay so the user knows renewal is imminent.
     let showRenewalOverlay: Bool
 
+    // MARK: - Watch mode
+
+    /// Since when Trio's Apple Watch app has had the pump (Trio's watch mode, its "Untethered Watch" treatment),
+    /// Unix epoch seconds; nil when it hasn't.
+    let watchModeSince: TimeInterval?
+
     // MARK: - Init
 
     init(
@@ -178,6 +184,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         isNotLooping: Bool,
         cgmSensorState: String? = nil,
         showRenewalOverlay: Bool = false,
+        watchModeSince: TimeInterval? = nil,
     ) {
         self.glucose = glucose
         self.delta = delta
@@ -213,6 +220,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         self.isNotLooping = isNotLooping
         self.cgmSensorState = cgmSensorState
         self.showRenewalOverlay = showRenewalOverlay
+        self.watchModeSince = watchModeSince
     }
 
     // MARK: - Derived Convenience
@@ -261,6 +269,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
             isNotLooping: isNotLooping,
             cgmSensorState: cgmSensorState,
             showRenewalOverlay: value,
+            watchModeSince: watchModeSince,
         )
     }
 
@@ -302,6 +311,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         try container.encode(isNotLooping, forKey: .isNotLooping)
         try container.encodeIfPresent(cgmSensorState, forKey: .cgmSensorState)
         try container.encode(showRenewalOverlay, forKey: .showRenewalOverlay)
+        try container.encodeIfPresent(watchModeSince, forKey: .watchModeSince)
     }
 
     init(from decoder: Decoder) throws {
@@ -340,6 +350,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         isNotLooping = try container.decodeIfPresent(Bool.self, forKey: .isNotLooping) ?? false
         cgmSensorState = try container.decodeIfPresent(String.self, forKey: .cgmSensorState)
         showRenewalOverlay = try container.decodeIfPresent(Bool.self, forKey: .showRenewalOverlay) ?? false
+        watchModeSince = try container.decodeIfPresent(TimeInterval.self, forKey: .watchModeSince)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -351,6 +362,7 @@ struct GlucoseSnapshot: Codable, Equatable, Hashable {
         case profileName, sageInsertTime, cageInsertTime, iageInsertTime, minBgMgdl, maxBgMgdl
         case unit, isNotLooping, cgmSensorState, showRenewalOverlay
         case history
+        case watchModeSince
     }
 }
 

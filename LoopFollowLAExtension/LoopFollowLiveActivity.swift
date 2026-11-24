@@ -221,7 +221,7 @@ private struct LockScreenLiveActivityView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                LAHistoryGraphView(history: s.history)
+                LAHistoryGraphView(history: LAGraphHistory.points(for: s))
                     .frame(maxWidth: .infinity)
                     .frame(height: 72)
             }
@@ -827,6 +827,27 @@ private enum LAFormat {
 }
 
 // MARK: - Lock screen history graph
+
+/// The graph's readings. An update can arrive without them: from LF Hub, which builds its own updates, or as a push
+/// too large to carry them. The card then drew its graph from the app's update for a moment, and the next update
+/// took it away. Such an update now takes the readings the app keeps for the home screen widget in the App Group,
+/// up to this update's reading, which it adds when the stored ones end earlier.
+enum LAGraphHistory {
+    static func points(for snapshot: GlucoseSnapshot) -> [LAHistoryPoint] {
+        if snapshot.history.count >= 2 { return snapshot.history }
+        guard let stored = WidgetBGStore.load() else { return snapshot.history }
+        let end = snapshot.updatedAt.timeIntervalSince1970
+        let start = end - WidgetBGStore.historySeconds
+        var points = stored.points
+            .filter { $0.date >= start && $0.date <= end + 60 }
+            .map { LAHistoryPoint(d: $0.date, v: Int($0.mgdl.rounded())) }
+        if snapshot.glucose > 0, (points.last?.d ?? 0) < end - 60 {
+            points.append(LAHistoryPoint(d: end, v: Int(snapshot.glucose.rounded())))
+        }
+        return points
+    }
+}
+
 
 /// Mini version of the main screen's BG graph for the Lock Screen widget.
 /// Colors each short line segment with the same dynamic gradient as the main

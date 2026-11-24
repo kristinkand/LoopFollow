@@ -244,7 +244,13 @@ class APNSClient {
             guard let object = build(stride),
                   let data = try? JSONSerialization.data(withJSONObject: object)
             else { return nil }
-            if data.count <= Self.maxPayloadBytes { return data }
+            if data.count <= Self.maxPayloadBytes {
+                // only when the graph had to be thinned, so the log shows how close the payload runs to the limit
+                if stride > 1 {
+                    LogManager.shared.log(category: .apns, message: "APNs payload \(data.count) bytes with every \(stride)th graph reading")
+                }
+                return data
+            }
         }
         LogManager.shared.log(category: .apns, message: "APNs payload too large even with thinned history — sending without graph")
         guard let object = build(0) else { return nil }

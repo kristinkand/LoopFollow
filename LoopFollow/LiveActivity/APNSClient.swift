@@ -307,6 +307,7 @@ class APNSClient {
         if snapshot.iageInsertTime > 0 { snapshotDict["iageInsertTime"] = snapshot.iageInsertTime }
         if let minBgMgdl = snapshot.minBgMgdl { snapshotDict["minBgMgdl"] = minBgMgdl }
         if let maxBgMgdl = snapshot.maxBgMgdl { snapshotDict["maxBgMgdl"] = maxBgMgdl }
+        if let watchModeSince = snapshot.watchModeSince { snapshotDict["watchModeSince"] = watchModeSince }
 
         // Lock Screen mini graph. Without this every pushed update (all
         // background updates) arrives with an empty history and the graph

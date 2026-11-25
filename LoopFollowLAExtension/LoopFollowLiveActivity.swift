@@ -847,7 +847,6 @@ enum LAGraphHistory {
     }
 }
 
-
 /// The Lock Screen graph, drawn as Trio's Live Activity draws its own (LiveActivityChartView): the readings as dots in
 /// the dynamic glucose colors, dashed high and low lines, a solid target line and dashed hour lines, over 6 hours up to
 /// now, with the scale reaching from at most 39 to at least 300 mg/dL as in Trio.
